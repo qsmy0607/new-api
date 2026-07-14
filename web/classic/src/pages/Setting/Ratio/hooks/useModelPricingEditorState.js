@@ -116,7 +116,9 @@ const normalizeCompletionRatioMeta = (rawMeta) => {
   }
 
   return {
-    locked: Boolean(rawMeta.locked),
+    // Completion ratios are always editable. Backend defaults are only
+    // fallbacks and must not disable the price editor.
+    locked: false,
     ratio: toNumericString(rawMeta.ratio),
   };
 };
