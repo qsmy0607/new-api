@@ -39,7 +39,7 @@ const RedemptionsTable = (redemptionsData) => {
     rowSelection,
     handleRow,
     manageRedemption,
-    copyText,
+    copyRedemptionText,
     setEditingRedemption,
     setShowEdit,
     refresh,
@@ -61,7 +61,7 @@ const RedemptionsTable = (redemptionsData) => {
     return getRedemptionsColumns({
       t,
       manageRedemption,
-      copyText,
+      copyRedemptionText,
       setEditingRedemption,
       setShowEdit,
       refresh,
@@ -72,7 +72,7 @@ const RedemptionsTable = (redemptionsData) => {
   }, [
     t,
     manageRedemption,
-    copyText,
+    copyRedemptionText,
     setEditingRedemption,
     setShowEdit,
     refresh,

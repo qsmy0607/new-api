@@ -249,6 +249,19 @@ export const useRedemptionsData = () => {
     }
   };
 
+  const formatRedemptionCopyText = (code) => {
+    const template =
+      redemptionCopyTemplate || DEFAULT_REDEMPTION_COPY_TEMPLATE;
+    if (template.includes('{{code}}')) {
+      return template.replaceAll('{{code}}', code);
+    }
+    return `${template}${code}`;
+  };
+
+  const copyRedemptionText = async (code) => {
+    await copyText(formatRedemptionCopyText(code));
+  };
+
   // Batch copy redemption codes
   const batchCopyRedemptions = async () => {
     if (selectedKeys.length === 0) {
@@ -256,15 +269,8 @@ export const useRedemptionsData = () => {
       return;
     }
 
-    const template =
-      redemptionCopyTemplate || DEFAULT_REDEMPTION_COPY_TEMPLATE;
     const keys = selectedKeys
-      .map((redemption) => {
-        if (template.includes('{{code}}')) {
-          return template.replaceAll('{{code}}', redemption.key);
-        }
-        return `${template}${redemption.key}`;
-      })
+      .map((redemption) => formatRedemptionCopyText(redemption.key))
       .join('\n\n');
     await copyText(keys);
   };
@@ -363,6 +369,7 @@ export const useRedemptionsData = () => {
     manageRedemption,
     refresh,
     copyText,
+    copyRedemptionText,
     removeRecord,
 
     // State updates

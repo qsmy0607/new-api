@@ -79,7 +79,7 @@ const renderStatus = (status, record, t) => {
 export const getRedemptionsColumns = ({
   t,
   manageRedemption,
-  copyText,
+  copyRedemptionText,
   setEditingRedemption,
   setShowEdit,
   refresh,
@@ -191,7 +191,7 @@ export const getRedemptionsColumns = ({
             <Button
               size='small'
               onClick={async () => {
-                await copyText(record.key);
+                await copyRedemptionText(record.key);
               }}
             >
               {t('复制')}
