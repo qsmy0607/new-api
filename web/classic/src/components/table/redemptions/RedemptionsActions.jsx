@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React from 'react';
-import { Button } from '@douyinfe/semi-ui';
+import { Button, Modal, TextArea } from '@douyinfe/semi-ui';
 
 const RedemptionsActions = ({
   selectedKeys,
@@ -26,8 +26,20 @@ const RedemptionsActions = ({
   setShowEdit,
   batchCopyRedemptions,
   batchDeleteRedemptions,
+  redemptionCopyTemplate,
+  showTemplateModal,
+  setShowTemplateModal,
+  saveRedemptionCopyTemplate,
   t,
 }) => {
+  const [templateDraft, setTemplateDraft] = React.useState(
+    redemptionCopyTemplate,
+  );
+
+  React.useEffect(() => {
+    setTemplateDraft(redemptionCopyTemplate);
+  }, [redemptionCopyTemplate, showTemplateModal]);
+
   // Add new redemption code
   const handleAddRedemption = () => {
     setEditingRedemption({
@@ -64,6 +76,36 @@ const RedemptionsActions = ({
       >
         {t('清除失效兑换码')}
       </Button>
+      <Button
+        type='tertiary'
+        className='w-full md:w-auto'
+        onClick={() => setShowTemplateModal(true)}
+        size='small'
+      >
+        {t('兑换码模板')}
+      </Button>
+
+      <Modal
+        title={t('兑换码模板')}
+        visible={showTemplateModal}
+        onCancel={() => setShowTemplateModal(false)}
+        onOk={() => saveRedemptionCopyTemplate(templateDraft)}
+        okText={t('保存')}
+        cancelText={t('取消')}
+        size='large'
+      >
+        <div className='flex flex-col gap-2'>
+          <TextArea
+            autosize={{ minRows: 5, maxRows: 10 }}
+            value={templateDraft}
+            onChange={setTemplateDraft}
+            placeholder={t('请输入兑换码复制模板')}
+          />
+          <div className='text-xs text-gray-500'>
+            {t('使用 {{code}} 作为兑换码占位符，复制时会自动替换为实际兑换码。')}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

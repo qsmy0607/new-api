@@ -28,6 +28,10 @@ import { Modal } from '@douyinfe/semi-ui';
 import { useTranslation } from 'react-i18next';
 import { useTableCompactMode } from '../common/useTableCompactMode';
 
+const REDEMPTION_COPY_TEMPLATE_STORAGE_KEY = 'redemption_copy_template';
+const DEFAULT_REDEMPTION_COPY_TEMPLATE =
+  '您的兑换码：{{code}}。使用地址：https://newapi.zone，使用方式：个人中心-->钱包管理-->额度充值-->兑换码充值，输入该兑换码即可完成兑换。可使用codex、claude code，claude桌面端，以及各个API，使用方法见网站《文档》。';
+
 export const useRedemptionsData = () => {
   const { t } = useTranslation();
 
@@ -51,6 +55,13 @@ export const useRedemptionsData = () => {
 
   // UI state
   const [compactMode, setCompactMode] = useTableCompactMode('redemptions');
+  const [redemptionCopyTemplate, setRedemptionCopyTemplate] = useState(() => {
+    return (
+      localStorage.getItem(REDEMPTION_COPY_TEMPLATE_STORAGE_KEY) ||
+      DEFAULT_REDEMPTION_COPY_TEMPLATE
+    );
+  });
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   // Form state
   const formInitValues = {
@@ -245,11 +256,28 @@ export const useRedemptionsData = () => {
       return;
     }
 
-    let keys = '';
-    for (let i = 0; i < selectedKeys.length; i++) {
-      keys += selectedKeys[i].name + '    ' + selectedKeys[i].key + '\n';
-    }
+    const template =
+      redemptionCopyTemplate || DEFAULT_REDEMPTION_COPY_TEMPLATE;
+    const keys = selectedKeys
+      .map((redemption) => {
+        if (template.includes('{{code}}')) {
+          return template.replaceAll('{{code}}', redemption.key);
+        }
+        return `${template}${redemption.key}`;
+      })
+      .join('\n\n');
     await copyText(keys);
+  };
+
+  const saveRedemptionCopyTemplate = (template) => {
+    const normalizedTemplate = template || DEFAULT_REDEMPTION_COPY_TEMPLATE;
+    localStorage.setItem(
+      REDEMPTION_COPY_TEMPLATE_STORAGE_KEY,
+      normalizedTemplate,
+    );
+    setRedemptionCopyTemplate(normalizedTemplate);
+    setShowTemplateModal(false);
+    showSuccess(t('兑换码模板已保存'));
   };
 
   // Batch delete redemption codes (clear invalid)
@@ -324,6 +352,10 @@ export const useRedemptionsData = () => {
     // UI state
     compactMode,
     setCompactMode,
+    redemptionCopyTemplate,
+    showTemplateModal,
+    setShowTemplateModal,
+    saveRedemptionCopyTemplate,
 
     // Data operations
     loadRedemptions,

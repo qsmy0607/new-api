@@ -4218,6 +4218,10 @@
     "默认折叠侧边栏": "Mặc định thu gọn thanh bên",
     "默认测试模型": "Mô hình kiểm tra mặc định",
     "默认用户消息": "Xin chào",
-    "默认补全倍率": "Tỷ lệ hoàn thành mặc định"
+    "默认补全倍率": "Tỷ lệ hoàn thành mặc định",
+    "兑换码模板": "Mẫu mã đổi thưởng",
+    "兑换码模板已保存": "Đã lưu mẫu mã đổi thưởng",
+    "请输入兑换码复制模板": "Nhập mẫu sao chép mã đổi thưởng",
+    "使用 {{code}} 作为兑换码占位符，复制时会自动替换为实际兑换码。": "Dùng {{code}} làm phần giữ chỗ cho mã đổi thưởng. Khi sao chép, phần này sẽ tự động được thay bằng mã thực tế."
   }
 }

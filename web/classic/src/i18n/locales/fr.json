@@ -3684,6 +3684,10 @@
     "默认折叠侧边栏": "Réduire la barre latérale par défaut",
     "默认测试模型": "Modèle de test par défaut",
     "默认用户消息": "Bonjour",
-    "默认补全倍率": "Taux de complétion par défaut"
+    "默认补全倍率": "Taux de complétion par défaut",
+    "兑换码模板": "Modèle de code d'échange",
+    "兑换码模板已保存": "Modèle de code d'échange enregistré",
+    "请输入兑换码复制模板": "Saisissez le modèle de copie du code d'échange",
+    "使用 {{code}} 作为兑换码占位符，复制时会自动替换为实际兑换码。": "Utilisez {{code}} comme espace réservé du code d'échange. Il sera remplacé par le code réel lors de la copie."
   }
 }
