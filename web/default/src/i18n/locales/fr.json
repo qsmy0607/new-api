@@ -4676,6 +4676,8 @@
     "Total GPUs": "GPUs totaux",
     "Total invitation revenue": "Revenu total des invitations",
     "Total Log Size": "Taille totale des journaux",
+    "Daily Quota": "Quota quotidien",
+    "Daily Quota ({{currency}})": "Quota quotidien ({{currency}})",
     "Total Quota": "Quota total",
     "Total quota included in the plan, usable per billing period. 0 means unlimited.": "Quota total inclus dans le forfait, utilisable par période de facturation. 0 signifie illimité.",
     "Total requests allowed per period. 0 = unlimited.": "Total des requêtes autorisées par période. 0 = illimité.",

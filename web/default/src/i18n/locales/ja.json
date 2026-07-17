@@ -4676,6 +4676,8 @@
     "Total GPUs": "合計 GPU",
     "Total invitation revenue": "招待による総収益",
     "Total Log Size": "ログ合計サイズ",
+    "Daily Quota": "1日あたりのクォータ",
+    "Daily Quota ({{currency}})": "1日あたりのクォータ ({{currency}})",
     "Total Quota": "合計クォータ",
     "Total quota included in the plan, usable per billing period. 0 means unlimited.": "プランに含まれる合計クォータ。請求期間ごとに使用可能。0 は無制限を意味します。",
     "Total requests allowed per period. 0 = unlimited.": "期間ごとに許可されるリクエストの総数。0 = 無制限。",

@@ -310,7 +310,7 @@ const AddEditSubscriptionModal = ({
                     <Col span={12}>
                       <Form.InputNumber
                         field='total_amount'
-                        label={t('总额度')}
+                        label={t('每日额度')}
                         required
                         min={0}
                         precision={2}

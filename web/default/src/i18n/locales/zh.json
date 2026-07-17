@@ -4676,6 +4676,8 @@
     "Total GPUs": "总 GPU",
     "Total invitation revenue": "总邀请收入",
     "Total Log Size": "日志总大小",
+    "Daily Quota": "每日额度",
+    "Daily Quota ({{currency}})": "每日额度 ({{currency}})",
     "Total Quota": "总额度",
     "Total quota included in the plan, usable per billing period. 0 means unlimited.": "套餐包含的总额度，每个计费周期可用；0 表示不限量",
     "Total requests allowed per period. 0 = unlimited.": "每周期允许的总请求数。0 = 无限制。",

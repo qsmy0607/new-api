@@ -4676,6 +4676,8 @@
     "Total GPUs": "Tổng GPU",
     "Total invitation revenue": "Tổng doanh thu mời",
     "Total Log Size": "Tổng dung lượng nhật ký",
+    "Daily Quota": "Hạn mức hàng ngày",
+    "Daily Quota ({{currency}})": "Hạn mức hàng ngày ({{currency}})",
     "Total Quota": "Tổng hạn mức",
     "Total quota included in the plan, usable per billing period. 0 means unlimited.": "Tổng hạn ngạch bao gồm trong gói, dùng được mỗi kỳ thanh toán. 0 nghĩa là không giới hạn.",
     "Total requests allowed per period. 0 = unlimited.": "Tổng số yêu cầu được phép mỗi kỳ. 0 = không giới hạn.",

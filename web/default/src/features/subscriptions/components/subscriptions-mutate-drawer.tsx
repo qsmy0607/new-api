@@ -353,7 +353,9 @@ export function SubscriptionsMutateDrawer({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t('Quota ({{currency}})', { currency: currencyLabel })}
+                        {t('Daily Quota ({{currency}})', {
+                          currency: currencyLabel,
+                        })}
                       </FormLabel>
                       <FormControl>
                         <Input

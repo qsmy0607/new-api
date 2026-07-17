@@ -4676,6 +4676,8 @@
     "Total GPUs": "Total GPUs",
     "Total invitation revenue": "Total invitation revenue",
     "Total Log Size": "Total Log Size",
+    "Daily Quota": "Daily Quota",
+    "Daily Quota ({{currency}})": "Daily Quota ({{currency}})",
     "Total Quota": "Total Quota",
     "Total quota included in the plan, usable per billing period. 0 means unlimited.": "Total quota included in the plan, usable per billing period. 0 means unlimited.",
     "Total requests allowed per period. 0 = unlimited.": "Total requests allowed per period. 0 = unlimited.",

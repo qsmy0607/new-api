@@ -4676,6 +4676,8 @@
     "Total GPUs": "Всего GPU",
     "Total invitation revenue": "Общий доход от приглашений",
     "Total Log Size": "Общий размер журналов",
+    "Daily Quota": "Суточная квота",
+    "Daily Quota ({{currency}})": "Суточная квота ({{currency}})",
     "Total Quota": "Общая квота",
     "Total quota included in the plan, usable per billing period. 0 means unlimited.": "Общая квота, включённая в тариф, доступна за каждый расчётный период. 0 означает безлимит.",
     "Total requests allowed per period. 0 = unlimited.": "Общее количество запросов, разрешенных за период. 0 = без ограничений.",
