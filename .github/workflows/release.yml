@@ -3,15 +3,9 @@ permissions:
   contents: write
 
 on:
-  workflow_dispatch:
-    inputs:
-      name:
-        description: 'reason'
-        required: false
   push:
     tags:
-      - '*'
-      - '!*-alpha*'
+      - 'v*-custom.*'
 
 jobs:
   linux:
