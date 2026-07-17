@@ -501,8 +501,8 @@ const SubscriptionPlansCard = ({
                 const limitLabel = limit > 0 ? `${t('限购')} ${limit}` : null;
                 const totalLabel =
                   totalAmount > 0
-                    ? `${t('每日额度')}: ${renderQuota(totalAmount)}`
-                    : `${t('每日额度')}: ${t('不限')}`;
+                    ? `${t('每天额度')}: ${renderQuota(totalAmount)}`
+                    : `${t('每天额度')}: ${t('不限')}`;
                 const upgradeLabel = plan?.upgrade_group
                   ? `${t('升级分组')}: ${plan.upgrade_group}`
                   : null;
