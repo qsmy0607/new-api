@@ -1,0 +1,62 @@
+name: Custom branch checks
+
+on:
+  push:
+    branches:
+      - custom
+  pull_request:
+    branches:
+      - custom
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend regression tests
+    if: github.repository == 'qsmy0607/new-api'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: '>=1.25.1'
+          cache: true
+
+      - name: Run affected backend tests
+        run: go test ./setting/ratio_setting ./service
+
+  frontend:
+    name: Frontend checks
+    if: github.repository == 'qsmy0607/new-api'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.3.14'
+
+      - name: Install frontend dependencies
+        working-directory: web
+        run: bun install --frozen-lockfile
+
+      - name: Verify Default translations
+        working-directory: web/default
+        run: |
+          bun run i18n:sync
+          git diff --exit-code -- src/i18n/locales
+
+      - name: Type-check and build Default frontend
+        working-directory: web/default
+        run: bun run build:check
+
+      - name: Build Classic frontend
+        working-directory: web/classic
+        run: bun run build
