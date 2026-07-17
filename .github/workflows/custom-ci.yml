@@ -57,6 +57,10 @@ jobs:
         working-directory: web/default
         run: bun run build:check
 
+      - name: Install Classic frontend dependencies
+        working-directory: web
+        run: bun install --filter ./classic --frozen-lockfile
+
       - name: Build Classic frontend
         working-directory: web/classic
         run: bun run build
