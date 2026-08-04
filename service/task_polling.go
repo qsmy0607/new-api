@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -488,8 +489,17 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		taskResult.Progress = t.Progress
 		taskResult.Reason = t.FailReason
 		task.Data = t.Data
-	} else if taskResult, err = adaptor.ParseTaskResult(responseBody); err != nil {
-		return fmt.Errorf("parseTaskResult failed for task %s: %w", taskId, err)
+	} else {
+		parsedTaskResult, parseErr := adaptor.ParseTaskResult(responseBody)
+		normalizedTaskResult, recognized := normalizeVideoPollingResult(responseBody, parsedTaskResult)
+		if parseErr != nil && !recognized {
+			return fmt.Errorf("parseTaskResult failed for task %s: %w", taskId, parseErr)
+		}
+		if recognized {
+			taskResult = normalizedTaskResult
+		} else {
+			taskResult = parsedTaskResult
+		}
 	}
 
 	task.Data = redactVideoResponseBody(responseBody)
@@ -512,9 +522,10 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 				// 其他错误认为是任务失败，记录错误信息并更新任务状态
 				taskResult = relaycommon.FailTaskInfo("upstream returned error")
 			} else {
-				// unknown error format, log original response
-				logger.LogError(ctx, fmt.Sprintf("Task %s returned empty status with unrecognized error format, response: %s", taskId, string(responseBody)))
-				taskResult = relaycommon.FailTaskInfo("upstream returned unrecognized message")
+				// An unrecognized response is not an explicit failure. Keep polling until
+				// the upstream returns a terminal status or the task times out.
+				logger.LogWarn(ctx, fmt.Sprintf("Task %s returned empty status with unrecognized format, keep polling, response: %s", taskId, string(responseBody)))
+				return nil
 			}
 		}
 	}
@@ -599,6 +610,75 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	}
 
 	return nil
+}
+
+// normalizeVideoPollingResult recognizes the common OpenAI-compatible video
+// polling shape and maps its status and completion signals to internal states.
+func normalizeVideoPollingResult(body []byte, taskResult *relaycommon.TaskInfo) (*relaycommon.TaskInfo, bool) {
+	var response map[string]any
+	if err := common.Unmarshal(body, &response); err != nil {
+		return taskResult, false
+	}
+
+	statusValue, _ := response["status"].(string)
+	status := strings.ToLower(strings.TrimSpace(statusValue))
+	progress := 0
+	switch value := response["progress"].(type) {
+	case float64:
+		progress = int(value)
+	case string:
+		progress, _ = strconv.Atoi(strings.TrimSpace(strings.TrimSuffix(value, "%")))
+	}
+
+	resultURL := ""
+	metadata, _ := response["metadata"].(map[string]any)
+	for _, key := range []string{"url", "video_url"} {
+		if value, ok := metadata[key].(string); ok && strings.TrimSpace(value) != "" {
+			resultURL = strings.TrimSpace(value)
+			break
+		}
+	}
+
+	if status == "" && progress < 100 && resultURL == "" {
+		return taskResult, false
+	}
+	if taskResult == nil {
+		taskResult = &relaycommon.TaskInfo{}
+	}
+	if resultURL != "" {
+		taskResult.Url = resultURL
+	}
+
+	switch {
+	case progress >= 100 || resultURL != "":
+		taskResult.Status = model.TaskStatusSuccess
+	case status == "completed" || status == "succeeded" || status == "success":
+		taskResult.Status = model.TaskStatusSuccess
+	case status == "failed" || status == "error" || status == "canceled" || status == "cancelled" || status == "rejected" || status == "expired":
+		taskResult.Status = model.TaskStatusFailure
+		if taskResult.Reason == "" {
+			switch errorValue := response["error"].(type) {
+			case string:
+				taskResult.Reason = errorValue
+			case map[string]any:
+				taskResult.Reason, _ = errorValue["message"].(string)
+			}
+		}
+		if taskResult.Reason == "" {
+			taskResult.Reason = "task " + status
+		}
+	case status == "queued" || status == "pending":
+		taskResult.Status = model.TaskStatusQueued
+	default:
+		// Unknown and future non-terminal statuses remain pollable. Only explicit
+		// failure statuses fail a task.
+		taskResult.Status = model.TaskStatusInProgress
+	}
+
+	if progress > 0 && progress < 100 {
+		taskResult.Progress = fmt.Sprintf("%d%%", progress)
+	}
+	return taskResult, true
 }
 
 func redactVideoResponseBody(body []byte) []byte {

@@ -1,11 +1,14 @@
 package ali
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -169,4 +172,23 @@ func TestConvertToAliRequestWan25I2VKeepsLegacyImgURL(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(body), `"img_url"`)
 	require.NotContains(t, string(body), `"media"`)
+}
+
+func TestParseTaskResultUnknownKeepsPolling(t *testing.T) {
+	result, err := (&TaskAdaptor{}).ParseTaskResult([]byte(`{"output":{"task_status":"UNKNOWN"}}`))
+
+	require.NoError(t, err)
+	assert.Equal(t, model.TaskStatusInProgress, model.TaskStatus(result.Status))
+}
+
+func TestParseTaskResultExplicitFailureStatuses(t *testing.T) {
+	for _, status := range []string{"FAILED", "ERROR", "CANCELED", "REJECTED", "EXPIRED"} {
+		t.Run(status, func(t *testing.T) {
+			body := []byte(fmt.Sprintf(`{"output":{"task_status":%q}}`, status))
+			result, err := (&TaskAdaptor{}).ParseTaskResult(body)
+
+			require.NoError(t, err)
+			assert.Equal(t, model.TaskStatusFailure, model.TaskStatus(result.Status))
+		})
+	}
 }
