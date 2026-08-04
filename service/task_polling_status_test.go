@@ -53,7 +53,7 @@ func TestNormalizeVideoPollingResultCompletionSignals(t *testing.T) {
 			result, recognized := normalizeVideoPollingResult([]byte(test.body), &relaycommon.TaskInfo{})
 
 			require.True(t, recognized)
-			assert.Equal(t, model.TaskStatusSuccess, model.TaskStatus(result.Status))
+			assert.Equal(t, model.TaskStatus(model.TaskStatusSuccess), model.TaskStatus(result.Status))
 			assert.Equal(t, test.wantURL, result.Url)
 		})
 	}
@@ -66,7 +66,7 @@ func TestNormalizeVideoPollingResultExplicitFailureStatuses(t *testing.T) {
 			result, recognized := normalizeVideoPollingResult(body, &relaycommon.TaskInfo{})
 
 			require.True(t, recognized)
-			assert.Equal(t, model.TaskStatusFailure, model.TaskStatus(result.Status))
+			assert.Equal(t, model.TaskStatus(model.TaskStatusFailure), model.TaskStatus(result.Status))
 		})
 	}
 }
@@ -78,7 +78,7 @@ func TestNormalizeVideoPollingResultErrorString(t *testing.T) {
 	)
 
 	require.True(t, recognized)
-	assert.Equal(t, model.TaskStatusFailure, model.TaskStatus(result.Status))
+	assert.Equal(t, model.TaskStatus(model.TaskStatusFailure), model.TaskStatus(result.Status))
 	assert.Equal(t, "upstream rejected the task", result.Reason)
 }
 
@@ -89,5 +89,5 @@ func TestNormalizeVideoPollingResultUnrecognizedStatusKeepsPolling(t *testing.T)
 	)
 
 	require.True(t, recognized)
-	assert.Equal(t, model.TaskStatusInProgress, model.TaskStatus(result.Status))
+	assert.Equal(t, model.TaskStatus(model.TaskStatusInProgress), model.TaskStatus(result.Status))
 }

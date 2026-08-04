@@ -178,7 +178,7 @@ func TestParseTaskResultUnknownKeepsPolling(t *testing.T) {
 	result, err := (&TaskAdaptor{}).ParseTaskResult([]byte(`{"output":{"task_status":"UNKNOWN"}}`))
 
 	require.NoError(t, err)
-	assert.Equal(t, model.TaskStatusInProgress, model.TaskStatus(result.Status))
+	assert.Equal(t, model.TaskStatus(model.TaskStatusInProgress), model.TaskStatus(result.Status))
 }
 
 func TestParseTaskResultExplicitFailureStatuses(t *testing.T) {
@@ -188,7 +188,7 @@ func TestParseTaskResultExplicitFailureStatuses(t *testing.T) {
 			result, err := (&TaskAdaptor{}).ParseTaskResult(body)
 
 			require.NoError(t, err)
-			assert.Equal(t, model.TaskStatusFailure, model.TaskStatus(result.Status))
+			assert.Equal(t, model.TaskStatus(model.TaskStatusFailure), model.TaskStatus(result.Status))
 		})
 	}
 }
