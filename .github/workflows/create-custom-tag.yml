@@ -117,3 +117,12 @@ jobs:
     with:
       tag: ${{ needs.create.outputs.custom_tag }}
     secrets: inherit
+
+  publish_release:
+    name: Build and publish GitHub Release
+    needs: create
+    if: inputs.dry_run == false
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.create.outputs.custom_tag }}
+    secrets: inherit
