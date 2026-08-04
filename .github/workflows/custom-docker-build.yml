@@ -10,6 +10,12 @@ on:
         description: 'Existing custom tag to build (for example, v1.0.0-rc.21-custom.1)'
         required: true
         type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Existing custom tag to build'
+        required: true
+        type: string
 
 env:
   IMAGE_NAME: jitongyu0607/api

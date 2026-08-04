@@ -30,6 +30,8 @@ jobs:
     name: Create next custom tag
     if: github.repository == 'qsmy0607/new-api'
     runs-on: ubuntu-latest
+    outputs:
+      custom_tag: ${{ steps.tag.outputs.custom_tag }}
 
     steps:
       - name: Check out target branch
@@ -37,14 +39,13 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.target_branch }}
-          token: ${{ secrets.CUSTOM_TAG_TOKEN || github.token }}
 
       - name: Validate base and create next tag
+        id: tag
         env:
           OFFICIAL_TAG: ${{ inputs.official_tag }}
           TARGET_BRANCH: ${{ inputs.target_branch }}
           DRY_RUN: ${{ inputs.dry_run }}
-          HAS_CUSTOM_TAG_TOKEN: ${{ secrets.CUSTOM_TAG_TOKEN != '' }}
         run: |
           set -euo pipefail
 
@@ -82,6 +83,7 @@ jobs:
 
           next=$((latest + 1))
           custom_tag="$prefix$next"
+          echo "custom_tag=$custom_tag" >> "$GITHUB_OUTPUT"
 
           {
             echo '## Custom version tag'
@@ -107,10 +109,11 @@ jobs:
 
           echo "Created $custom_tag at $target_commit."
 
-          if [[ "$HAS_CUSTOM_TAG_TOKEN" != 'true' ]]; then
-            {
-              echo
-              echo '> The tag was pushed with GITHUB_TOKEN, so tag-triggered release workflows will not run automatically.'
-              echo '> Add a repository secret named CUSTOM_TAG_TOKEN if those workflows should be triggered by this tag.'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+  publish_image:
+    name: Build and push Docker image
+    needs: create
+    if: inputs.dry_run == false
+    uses: ./.github/workflows/custom-docker-build.yml
+    with:
+      tag: ${{ needs.create.outputs.custom_tag }}
+    secrets: inherit
