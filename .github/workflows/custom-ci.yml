@@ -47,20 +47,12 @@ jobs:
         working-directory: web
         run: bun install --frozen-lockfile
 
-      - name: Verify Default translations
-        working-directory: web/default
+      - name: Verify translations
+        working-directory: web
         run: |
           bun run i18n:sync
           git diff --exit-code -- src/i18n/locales
 
-      - name: Type-check and build Default frontend
-        working-directory: web/default
-        run: bun run build:check
-
-      - name: Install Classic frontend dependencies
+      - name: Type-check and build frontend
         working-directory: web
-        run: bun install --filter ./classic --frozen-lockfile
-
-      - name: Build Classic frontend
-        working-directory: web/classic
-        run: bun run build
+        run: bun run build:check
