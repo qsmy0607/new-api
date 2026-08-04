@@ -1,0 +1,116 @@
+name: Create custom version tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      official_tag:
+        description: 'Official base tag (for example, v1.0.0-rc.23)'
+        required: true
+        type: string
+      target_branch:
+        description: 'Branch whose current commit will receive the custom tag'
+        required: true
+        default: custom
+        type: string
+      dry_run:
+        description: 'Preview and validate without creating the tag'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: create-custom-tag
+  cancel-in-progress: false
+
+jobs:
+  create:
+    name: Create next custom tag
+    if: github.repository == 'qsmy0607/new-api'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out target branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.target_branch }}
+          token: ${{ secrets.CUSTOM_TAG_TOKEN || github.token }}
+
+      - name: Validate base and create next tag
+        env:
+          OFFICIAL_TAG: ${{ inputs.official_tag }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          HAS_CUSTOM_TAG_TOKEN: ${{ secrets.CUSTOM_TAG_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$OFFICIAL_TAG" =~ ^v[0-9A-Za-z._-]+$ ]] || [[ "$OFFICIAL_TAG" == *-custom.* ]]; then
+            echo "Invalid official tag: $OFFICIAL_TAG" >&2
+            exit 1
+          fi
+
+          git remote add upstream https://github.com/QuantumNous/new-api.git
+          git fetch --force --no-tags origin 'refs/tags/*:refs/tags/*'
+
+          upstream_ref="refs/upstream-base/$OFFICIAL_TAG"
+          if ! git fetch --force --no-tags upstream "refs/tags/$OFFICIAL_TAG:$upstream_ref"; then
+            echo "Official tag does not exist upstream: $OFFICIAL_TAG" >&2
+            exit 1
+          fi
+
+          base_commit=$(git rev-parse "$upstream_ref^{commit}")
+          target_commit=$(git rev-parse HEAD)
+
+          if ! git merge-base --is-ancestor "$base_commit" "$target_commit"; then
+            echo "$OFFICIAL_TAG is not contained in $TARGET_BRANCH." >&2
+            echo 'Merge or rebase the official version into custom before tagging.' >&2
+            exit 1
+          fi
+
+          prefix="$OFFICIAL_TAG-custom."
+          latest=0
+          while IFS= read -r tag; do
+            suffix=${tag#"$prefix"}
+            if [[ "$suffix" =~ ^[0-9]+$ ]] && ((10#$suffix > latest)); then
+              latest=$((10#$suffix))
+            fi
+          done < <(git tag --list "$prefix*")
+
+          next=$((latest + 1))
+          custom_tag="$prefix$next"
+
+          {
+            echo '## Custom version tag'
+            echo
+            echo "- Official base: \`$OFFICIAL_TAG\`"
+            echo "- Official commit: \`$base_commit\`"
+            echo "- Target branch: \`$TARGET_BRANCH\`"
+            echo "- Target commit: \`$target_commit\`"
+            echo "- New custom tag: \`$custom_tag\`"
+            echo "- Dry run: \`$DRY_RUN\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$DRY_RUN" == 'true' ]]; then
+            echo "Dry run: would create $custom_tag at $target_commit."
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$custom_tag" "$target_commit" \
+            -m "$custom_tag based on official $OFFICIAL_TAG ($base_commit)"
+          git push origin "refs/tags/$custom_tag"
+
+          echo "Created $custom_tag at $target_commit."
+
+          if [[ "$HAS_CUSTOM_TAG_TOKEN" != 'true' ]]; then
+            {
+              echo
+              echo '> The tag was pushed with GITHUB_TOKEN, so tag-triggered release workflows will not run automatically.'
+              echo '> Add a repository secret named CUSTOM_TAG_TOKEN if those workflows should be triggered by this tag.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
