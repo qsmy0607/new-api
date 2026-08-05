@@ -119,7 +119,7 @@ describe('recharge form card', () => {
     container.remove()
   })
 
-  test('renders discount and savings labels at 10px without wrapping', async () => {
+  test('shows only the payment amount beneath a discounted preset', async () => {
     const container = document.createElement('div')
     document.body.append(container)
     const root = createRoot(container)
@@ -158,16 +158,19 @@ describe('recharge form card', () => {
     const discountLabel = container.querySelector(
       '[data-preset-discount="true"]'
     )
-    const savingsLabel = container.querySelector('[data-preset-savings="true"]')
     assert.ok(discountLabel)
-    assert.ok(savingsLabel)
+    assert.equal(discountLabel.classList.contains('text-[10px]'), true)
+    assert.equal(discountLabel.classList.contains('leading-3'), true)
+    assert.equal(discountLabel.classList.contains('whitespace-nowrap'), true)
+    assert.equal(discountLabel.classList.contains('shrink-0'), true)
 
-    for (const label of [discountLabel, savingsLabel]) {
-      assert.equal(label.classList.contains('text-[10px]'), true)
-      assert.equal(label.classList.contains('leading-3'), true)
-      assert.equal(label.classList.contains('whitespace-nowrap'), true)
-      assert.equal(label.classList.contains('shrink-0'), true)
-    }
+    const paymentAmount = container.querySelector(
+      '[data-preset-payment-amount="true"]'
+    )
+    assert.ok(paymentAmount)
+    assert.equal(paymentAmount.textContent?.trim(), '¥500')
+    assert.equal(paymentAmount.textContent?.includes('Pay'), false)
+    assert.equal(container.querySelector('[data-preset-savings="true"]'), null)
 
     await act(async () => root.unmount())
     container.remove()

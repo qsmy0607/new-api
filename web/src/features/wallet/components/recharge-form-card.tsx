@@ -232,17 +232,13 @@ export function RechargeFormCard({
                         preset.discount ||
                         topupInfo?.discount?.[preset.value] ||
                         1.0
-                      const {
-                        displayValue,
-                        actualPrice,
-                        savedAmount,
-                        hasDiscount,
-                      } = calculatePresetPricing(
-                        preset.value,
-                        priceRatio,
-                        discount,
-                        usdExchangeRate
-                      )
+                      const { displayValue, actualPrice, hasDiscount } =
+                        calculatePresetPricing(
+                          preset.value,
+                          priceRatio,
+                          discount,
+                          usdExchangeRate
+                        )
                       return (
                         <Button
                           key={preset.value}
@@ -271,17 +267,11 @@ export function RechargeFormCard({
                               </div>
                             )}
                           </div>
-                          <div className='text-muted-foreground mt-1.5 w-full text-xs sm:mt-2'>
-                            Pay ¥{formatCurrency(actualPrice)}
-                            {hasDiscount && savedAmount > 0 && (
-                              <span
-                                className='shrink-0 text-[10px] leading-3 whitespace-nowrap text-green-600'
-                                data-preset-savings='true'
-                              >
-                                {' '}
-                                • Save ¥{formatCurrency(savedAmount)}
-                              </span>
-                            )}
+                          <div
+                            className='text-muted-foreground mt-1.5 w-full text-xs sm:mt-2'
+                            data-preset-payment-amount='true'
+                          >
+                            ¥{formatCurrency(actualPrice)}
                           </div>
                         </Button>
                       )
