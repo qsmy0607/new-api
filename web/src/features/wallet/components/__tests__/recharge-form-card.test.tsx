@@ -118,4 +118,58 @@ describe('recharge form card', () => {
     await act(async () => root.unmount())
     container.remove()
   })
+
+  test('renders discount and savings labels at 10px without wrapping', async () => {
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+
+    await act(async () => {
+      root.render(
+        <I18nextProvider i18n={i18n}>
+          <RechargeFormCard
+            topupInfo={{
+              enable_online_topup: true,
+              enable_stripe_topup: false,
+              pay_methods: [],
+              min_topup: 1,
+              stripe_min_topup: 1,
+              amount_options: [1000],
+              discount: { 1000: 0.5 },
+            }}
+            presetAmounts={[{ value: 1000, discount: 0.5 }]}
+            selectedPreset={null}
+            onSelectPreset={() => undefined}
+            topupAmount={1000}
+            onTopupAmountChange={() => undefined}
+            paymentAmount={500}
+            calculating={false}
+            onPaymentMethodSelect={() => undefined}
+            paymentLoading={null}
+            redemptionCode=''
+            onRedemptionCodeChange={() => undefined}
+            onRedeem={() => undefined}
+            redeeming={false}
+          />
+        </I18nextProvider>
+      )
+    })
+
+    const discountLabel = container.querySelector(
+      '[data-preset-discount="true"]'
+    )
+    const savingsLabel = container.querySelector('[data-preset-savings="true"]')
+    assert.ok(discountLabel)
+    assert.ok(savingsLabel)
+
+    for (const label of [discountLabel, savingsLabel]) {
+      assert.equal(label.classList.contains('text-[10px]'), true)
+      assert.equal(label.classList.contains('leading-3'), true)
+      assert.equal(label.classList.contains('whitespace-nowrap'), true)
+      assert.equal(label.classList.contains('shrink-0'), true)
+    }
+
+    await act(async () => root.unmount())
+    container.remove()
+  })
 })
