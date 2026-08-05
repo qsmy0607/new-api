@@ -256,8 +256,11 @@ export function RechargeFormCard({
                           onClick={() => onSelectPreset(preset)}
                         >
                           <div className='flex w-full items-center justify-between'>
-                            <div className='text-base font-semibold sm:text-lg'>
-                              {formatNumber(displayValue)} ¥
+                            <div
+                              className='text-base font-semibold sm:text-lg'
+                              data-preset-amount-value='true'
+                            >
+                              {formatNumber(displayValue)} $
                             </div>
                             {hasDiscount && (
                               <div className='text-xs font-medium text-green-600'>
