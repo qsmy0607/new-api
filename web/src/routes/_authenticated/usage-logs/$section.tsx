@@ -24,6 +24,7 @@ import {
   isUsageLogsSectionId,
   USAGE_LOGS_DEFAULT_SECTION,
 } from '@/features/usage-logs/section-registry'
+import { LOG_TIME_PRESET_VALUES } from '@/features/usage-logs/types'
 
 const logTypeValues = ['0', '1', '2', '3', '4', '5', '6', '7'] as const
 const logTypeSearchSchema = z
@@ -45,6 +46,7 @@ const usageLogsSearchSchema = z.object({
   username: z.string().optional().catch(''),
   requestId: z.string().optional().catch(''),
   upstreamRequestId: z.string().optional().catch(''),
+  rangePreset: z.enum(LOG_TIME_PRESET_VALUES).optional().catch(undefined),
   startTime: z.number().optional(),
   endTime: z.number().optional(),
 })

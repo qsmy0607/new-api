@@ -30,6 +30,25 @@ import type { UsageLog } from './data/schema'
  */
 export type LogCategory = 'common' | 'drawing' | 'task'
 
+export const LOG_TIME_PRESET_VALUES = [
+  'today',
+  'last7Days',
+  'thisWeek',
+  'last30Days',
+  'thisMonth',
+] as const
+
+export type LogTimePreset = (typeof LOG_TIME_PRESET_VALUES)[number]
+
+export type LogTimeSelection =
+  | { kind: 'preset'; preset: LogTimePreset }
+  | { kind: 'custom'; start?: Date; end?: Date }
+
+export interface ResolvedLogTimeRange {
+  start?: Date
+  end?: Date
+}
+
 // ============================================================================
 // Filter Types
 // ============================================================================
@@ -38,8 +57,7 @@ export type LogCategory = 'common' | 'drawing' | 'task'
  * Common filters (shared across all log types)
  */
 export interface CommonFilters {
-  startTime?: Date
-  endTime?: Date
+  timeRange: LogTimeSelection
   channel?: string
 }
 
@@ -393,6 +411,7 @@ export interface FetchLogsConfig {
   pageSize: number
   searchParams: Record<string, unknown>
   columnFilters: Array<{ id: string; value: unknown }>
+  timeRange: ResolvedLogTimeRange
 }
 
 // ============================================================================

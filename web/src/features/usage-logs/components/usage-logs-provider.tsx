@@ -17,10 +17,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react'
 
 import { useIsAdmin } from '@/hooks/use-admin'
 
+import { getDefaultTimeRange, getMillisecondsUntilNextDay } from '../lib/utils'
 import type { ChannelAffinityInfo } from '../types'
 
 export type LogsViewScope = 'all' | 'self'
@@ -38,6 +45,7 @@ interface UsageLogsContextValue {
   setSensitiveVisible: (visible: boolean) => void
   viewScope: LogsViewScope
   setViewScope: (scope: LogsViewScope) => void
+  currentDayStart: number
 }
 
 const UsageLogsContext = createContext<UsageLogsContextValue | undefined>(
@@ -52,6 +60,39 @@ export function UsageLogsProvider({ children }: { children: ReactNode }) {
   const [affinityDialogOpen, setAffinityDialogOpen] = useState(false)
   const [sensitiveVisible, setSensitiveVisible] = useState(true)
   const [viewScope, setViewScope] = useState<LogsViewScope>('all')
+  const [currentDayStart, setCurrentDayStart] = useState(() =>
+    getDefaultTimeRange().start.getTime()
+  )
+
+  useEffect(() => {
+    let timeoutId: number | undefined
+
+    const syncCurrentDay = () => {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+
+      const now = new Date()
+      const nextDayStart = getDefaultTimeRange(now).start.getTime()
+      setCurrentDayStart((current) =>
+        current === nextDayStart ? current : nextDayStart
+      )
+      timeoutId = window.setTimeout(
+        syncCurrentDay,
+        getMillisecondsUntilNextDay(now) + 50
+      )
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') syncCurrentDay()
+    }
+
+    syncCurrentDay()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   return (
     <UsageLogsContext.Provider
@@ -68,6 +109,7 @@ export function UsageLogsProvider({ children }: { children: ReactNode }) {
         setSensitiveVisible,
         viewScope,
         setViewScope,
+        currentDayStart,
       }}
     >
       {children}

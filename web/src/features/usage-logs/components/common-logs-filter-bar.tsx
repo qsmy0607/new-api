@@ -39,9 +39,9 @@ import {
 } from '@/components/ui/tooltip'
 
 import { LOG_TYPE_ALL_VALUE, LOG_TYPE_FILTERS } from '../constants'
-import { buildSearchParams } from '../lib/filter'
-import { getDefaultTimeRange } from '../lib/utils'
-import type { CommonLogFilters } from '../types'
+import { buildSearchParams, canResetCommonLogFilters } from '../lib/filter'
+import { parseLogTimeSelection, resolveLogTimeRange } from '../lib/utils'
+import type { CommonLogFilters, LogTimeSelection } from '../types'
 import { CommonLogsStats } from './common-logs-stats'
 import { CompactDateTimeRangePicker } from './compact-date-time-range-picker'
 import {
@@ -88,6 +88,7 @@ function buildSearchSourceKey(values: {
   requestId?: unknown
   upstreamRequestId?: unknown
   type?: unknown
+  rangePreset?: unknown
 }) {
   return [
     values.startTime,
@@ -100,6 +101,7 @@ function buildSearchSourceKey(values: {
     values.requestId,
     values.upstreamRequestId,
     Array.isArray(values.type) ? values.type.join(',') : values.type,
+    values.rangePreset,
   ]
     .map((value) => String(value ?? ''))
     .join('\u001f')
@@ -117,11 +119,11 @@ export function CommonLogsFilterBar<TData>(
   const queryClient = useQueryClient()
   const searchParams = route.useSearch()
   const { isAdminView: isAdmin } = useLogsViewScope()
-  const { sensitiveVisible, setSensitiveVisible } = useUsageLogsContext()
+  const { sensitiveVisible, setSensitiveVisible, currentDayStart } =
+    useUsageLogsContext()
   const fetchingLogs = useIsFetching({ queryKey: ['logs'] })
 
   const searchState = useMemo<CommonLogDraft>(() => {
-    const { start, end } = getDefaultTimeRange()
     const sourceValues = {
       startTime: searchParams.startTime,
       endTime: searchParams.endTime,
@@ -133,12 +135,14 @@ export function CommonLogsFilterBar<TData>(
       requestId: searchParams.requestId,
       upstreamRequestId: searchParams.upstreamRequestId,
       type: searchParams.type,
+      rangePreset: searchParams.rangePreset,
     }
     const filters: CommonLogFilters = {
-      startTime: searchParams.startTime
-        ? new Date(searchParams.startTime)
-        : start,
-      endTime: searchParams.endTime ? new Date(searchParams.endTime) : end,
+      timeRange: parseLogTimeSelection({
+        rangePreset: searchParams.rangePreset,
+        startTime: searchParams.startTime,
+        endTime: searchParams.endTime,
+      }),
       channel: searchParams.channel || undefined,
       model: searchParams.model || undefined,
       token: searchParams.token || undefined,
@@ -163,21 +167,44 @@ export function CommonLogsFilterBar<TData>(
     searchParams.requestId,
     searchParams.upstreamRequestId,
     searchParams.type,
+    searchParams.rangePreset,
   ])
   const [draft, setDraft] = useState<CommonLogDraft>(() => searchState)
   const activeDraft =
     draft.sourceKey === searchState.sourceKey ? draft : searchState
   const filters = activeDraft.filters
   const logType = activeDraft.logType
+  const resolvedTimeRange = resolveLogTimeRange(
+    filters.timeRange,
+    new Date(currentDayStart)
+  )
 
   const handleChange = useCallback(
-    (field: keyof CommonLogFilters, value: Date | string | undefined) => {
+    (
+      field: Exclude<keyof CommonLogFilters, 'timeRange'>,
+      value: string | undefined
+    ) => {
       setDraft((current) => {
         const base =
           current.sourceKey === searchState.sourceKey ? current : searchState
         return {
           sourceKey: searchState.sourceKey,
           filters: { ...base.filters, [field]: value },
+          logType: base.logType,
+        }
+      })
+    },
+    [searchState]
+  )
+
+  const handleTimeRangeChange = useCallback(
+    (timeRange: LogTimeSelection) => {
+      setDraft((current) => {
+        const base =
+          current.sourceKey === searchState.sourceKey ? current : searchState
+        return {
+          sourceKey: searchState.sourceKey,
+          filters: { ...base.filters, timeRange },
           logType: base.logType,
         }
       })
@@ -201,12 +228,11 @@ export function CommonLogsFilterBar<TData>(
   }, [filters, logType, navigate, queryClient])
 
   const handleReset = useCallback(() => {
-    const { start, end } = getDefaultTimeRange()
-    const resetFilters: CommonLogFilters = { startTime: start, endTime: end }
+    const resetFilters: CommonLogFilters = {
+      timeRange: { kind: 'preset', preset: 'today' },
+    }
     const resetSearch = {
       type: [LOG_TYPE_ALL_VALUE],
-      startTime: start.getTime(),
-      endTime: end.getTime(),
     }
     setDraft({
       sourceKey: buildSearchSourceKey(resetSearch),
@@ -241,8 +267,12 @@ export function CommonLogsFilterBar<TData>(
     !!filters.upstreamRequestId
 
   const hasTypeFilter = logType !== LOG_TYPE_ALL_VALUE
-  const hasAdditionalFilters =
-    !!filters.model || !!filters.group || hasTypeFilter || hasExpandedFilters
+  const hasAdditionalFilters = canResetCommonLogFilters(
+    filters,
+    logType,
+    searchState.filters,
+    searchParams.type
+  )
 
   const expandedFilterCount = [
     filters.token,
@@ -292,12 +322,9 @@ export function CommonLogsFilterBar<TData>(
   const dateRangeFilter = (
     <LogsFilterField wide>
       <CompactDateTimeRangePicker
-        start={filters.startTime}
-        end={filters.endTime}
-        onChange={({ start, end }) => {
-          handleChange('startTime', start)
-          handleChange('endTime', end)
-        }}
+        start={resolvedTimeRange.start}
+        end={resolvedTimeRange.end}
+        onChange={handleTimeRangeChange}
       />
     </LogsFilterField>
   )

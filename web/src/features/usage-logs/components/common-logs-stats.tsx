@@ -26,7 +26,11 @@ import { cn } from '@/lib/utils'
 
 import { getLogStats, getUserLogStats } from '../api'
 import { DEFAULT_LOG_STATS } from '../constants'
-import { buildApiParams } from '../lib/utils'
+import {
+  buildApiParams,
+  parseLogTimeSelection,
+  resolveLogTimeRange,
+} from '../lib/utils'
 import { useLogsViewScope, useUsageLogsContext } from './usage-logs-provider'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
@@ -51,15 +55,21 @@ export function CommonLogsStats() {
   const { t } = useTranslation()
   const { isAdminView: isAdmin } = useLogsViewScope()
   const searchParams = route.useSearch()
-  const { sensitiveVisible } = useUsageLogsContext()
+  const { sensitiveVisible, currentDayStart } = useUsageLogsContext()
+  const timeRange = resolveLogTimeRange(
+    parseLogTimeSelection(searchParams),
+    new Date(currentDayStart)
+  )
+  const timeRangeKey = [timeRange.start?.getTime(), timeRange.end?.getTime()]
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['usage-logs-stats', isAdmin, searchParams],
+    queryKey: ['usage-logs-stats', isAdmin, searchParams, timeRangeKey],
     queryFn: async () => {
       const params = buildApiParams({
         page: 1,
         pageSize: 1,
         searchParams,
+        timeRange,
         columnFilters: [],
         isAdmin,
       })

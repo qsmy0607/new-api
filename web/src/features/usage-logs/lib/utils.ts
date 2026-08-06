@@ -19,6 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 /**
  * Utility functions for usage logs feature
  */
+import dayjs from '@/lib/dayjs'
+
 import {
   getAllLogs,
   getUserLogs,
@@ -32,12 +34,16 @@ import {
   DISPLAYABLE_LOG_TYPES,
   TIMING_LOG_TYPES,
 } from '../constants'
-import type {
-  GetLogsParams,
-  GetLogsResponse,
-  FetchLogsConfig,
-  GetMidjourneyLogsParams,
-  GetTaskLogsParams,
+import {
+  LOG_TIME_PRESET_VALUES,
+  type FetchLogsConfig,
+  type GetLogsParams,
+  type GetLogsResponse,
+  type GetMidjourneyLogsParams,
+  type GetTaskLogsParams,
+  type LogTimePreset,
+  type LogTimeSelection,
+  type ResolvedLogTimeRange,
 } from '../types'
 
 // ============================================================================
@@ -73,16 +79,97 @@ export function isPerCallBilling(modelPrice?: number): boolean {
 }
 
 /**
- * Get default time range (today 00:00:00 to 23:59:59)
+ * Get default time range (today 00:00:00.000 to 23:59:59.999)
  */
-export function getDefaultTimeRange(): { start: Date; end: Date } {
-  const now = new Date()
-  const start = new Date(now)
+export function getDefaultTimeRange(referenceDate = new Date()): {
+  start: Date
+  end: Date
+} {
+  const start = new Date(referenceDate)
   start.setHours(0, 0, 0, 0)
-  const end = new Date(now)
+  const end = new Date(referenceDate)
   end.setHours(23, 59, 59, 999)
 
   return { start, end }
+}
+
+export function getMillisecondsUntilNextDay(
+  referenceDate = new Date()
+): number {
+  const { start } = getDefaultTimeRange(referenceDate)
+  const nextDay = new Date(start)
+  nextDay.setDate(nextDay.getDate() + 1)
+  return Math.max(1, nextDay.getTime() - referenceDate.getTime())
+}
+
+export function isLogTimePreset(value: unknown): value is LogTimePreset {
+  return (
+    typeof value === 'string' &&
+    (LOG_TIME_PRESET_VALUES as readonly string[]).includes(value)
+  )
+}
+
+export function parseLogTimeSelection(
+  searchParams: Record<string, unknown>
+): LogTimeSelection {
+  const hasStartTime =
+    typeof searchParams.startTime === 'number' &&
+    Number.isFinite(searchParams.startTime)
+  const hasEndTime =
+    typeof searchParams.endTime === 'number' &&
+    Number.isFinite(searchParams.endTime)
+
+  if (hasStartTime || hasEndTime) {
+    return {
+      kind: 'custom',
+      ...(hasStartTime
+        ? { start: new Date(searchParams.startTime as number) }
+        : {}),
+      ...(hasEndTime ? { end: new Date(searchParams.endTime as number) } : {}),
+    }
+  }
+
+  return {
+    kind: 'preset',
+    preset: isLogTimePreset(searchParams.rangePreset)
+      ? searchParams.rangePreset
+      : 'today',
+  }
+}
+
+export function resolveLogTimeRange(
+  selection: LogTimeSelection,
+  referenceDate = new Date()
+): ResolvedLogTimeRange {
+  if (selection.kind === 'custom') {
+    return { start: selection.start, end: selection.end }
+  }
+
+  const now = dayjs(referenceDate)
+  const presets: Record<LogTimePreset, ResolvedLogTimeRange> = {
+    today: {
+      start: now.startOf('day').toDate(),
+      end: now.endOf('day').toDate(),
+    },
+    last7Days: {
+      start: now.subtract(6, 'day').startOf('day').toDate(),
+      end: now.endOf('day').toDate(),
+    },
+    thisWeek: {
+      start: now.startOf('week').toDate(),
+      end: now.endOf('week').toDate(),
+    },
+    last30Days: {
+      start: now.subtract(29, 'day').startOf('day').toDate(),
+      end: now.endOf('day').toDate(),
+    },
+    thisMonth: {
+      start: now.startOf('month').toDate(),
+      end: now.endOf('month').toDate(),
+    },
+  }
+
+  return presets[selection.preset]
 }
 
 /**
@@ -93,48 +180,22 @@ function timestampToSeconds(ms: number): number {
 }
 
 /**
- * Build query parameters from filters
- */
-export function buildQueryParams(
-  params: Record<string, unknown>
-): URLSearchParams {
-  const queryParams = new URLSearchParams()
-
-  Object.entries(params).forEach(([key, value]) => {
-    // Keep 0 as a valid value, only filter out undefined, null, and empty string
-    if (value !== undefined && value !== null && value !== '') {
-      queryParams.append(key, String(value))
-    }
-  })
-
-  return queryParams
-}
-
-/**
- * Build time range parameters with default values
- * Shared logic for all log types
+ * Build API time range parameters from the resolved UI range.
  */
 function buildTimeRangeParams(
-  searchParams: Record<string, unknown>,
+  timeRange: ResolvedLogTimeRange,
   useMilliseconds: boolean
 ): { start_timestamp?: number; end_timestamp?: number } {
-  const hasTimeParams = searchParams.startTime ?? searchParams.endTime
-  const defaultTimeRange = !hasTimeParams ? getDefaultTimeRange() : null
-
   const convertTimestamp = (timestamp: number) =>
     useMilliseconds ? timestamp : timestampToSeconds(timestamp)
 
-  const getTimestamp = (paramTime?: unknown, defaultTime?: Date) => {
-    const time = (paramTime as number) || defaultTime?.getTime()
-    return time ? convertTimestamp(time) : undefined
-  }
-
   return {
-    start_timestamp: getTimestamp(
-      searchParams.startTime,
-      defaultTimeRange?.start
-    ),
-    end_timestamp: getTimestamp(searchParams.endTime, defaultTimeRange?.end),
+    start_timestamp: timeRange.start
+      ? convertTimestamp(timeRange.start.getTime())
+      : undefined,
+    end_timestamp: timeRange.end
+      ? convertTimestamp(timeRange.end.getTime())
+      : undefined,
   }
 }
 
@@ -146,6 +207,7 @@ export function buildBaseParams(config: {
   page: number
   pageSize: number
   searchParams: Record<string, unknown>
+  timeRange: ResolvedLogTimeRange
   useMilliseconds?: boolean
 }): {
   p: number
@@ -154,7 +216,13 @@ export function buildBaseParams(config: {
   start_timestamp?: number
   end_timestamp?: number
 } {
-  const { page, pageSize, searchParams, useMilliseconds = false } = config
+  const {
+    page,
+    pageSize,
+    searchParams,
+    timeRange,
+    useMilliseconds = false,
+  } = config
 
   return {
     p: page,
@@ -164,7 +232,7 @@ export function buildBaseParams(config: {
           channel_id: String(searchParams.channel),
         }
       : {}),
-    ...buildTimeRangeParams(searchParams, useMilliseconds),
+    ...buildTimeRangeParams(timeRange, useMilliseconds),
   }
 }
 
@@ -175,10 +243,18 @@ export function buildApiParams(config: {
   page: number
   pageSize: number
   searchParams: Record<string, unknown>
+  timeRange: ResolvedLogTimeRange
   columnFilters?: Array<{ id: string; value: unknown }>
   isAdmin: boolean
 }): GetLogsParams {
-  const { page, pageSize, searchParams, columnFilters = [], isAdmin } = config
+  const {
+    page,
+    pageSize,
+    searchParams,
+    timeRange,
+    columnFilters = [],
+    isAdmin,
+  } = config
 
   // Helper to process type parameter (single value from array)
   const processType = (value: unknown): number | undefined => {
@@ -216,7 +292,7 @@ export function buildApiParams(config: {
     ...(searchParams.upstreamRequestId
       ? { upstream_request_id: String(searchParams.upstreamRequestId) }
       : {}),
-    ...buildTimeRangeParams(searchParams, false),
+    ...buildTimeRangeParams(timeRange, false),
   }
 
   // Override with column filters if present
@@ -260,14 +336,22 @@ export function buildApiParams(config: {
 export async function fetchLogsByCategory(
   config: FetchLogsConfig
 ): Promise<GetLogsResponse> {
-  const { logCategory, isAdmin, page, pageSize, searchParams, columnFilters } =
-    config
+  const {
+    logCategory,
+    isAdmin,
+    page,
+    pageSize,
+    searchParams,
+    columnFilters,
+    timeRange,
+  } = config
 
   if (logCategory === 'common') {
     const params = buildApiParams({
       page,
       pageSize,
       searchParams,
+      timeRange,
       columnFilters,
       isAdmin,
     })
@@ -279,6 +363,7 @@ export async function fetchLogsByCategory(
     page,
     pageSize,
     searchParams,
+    timeRange,
     useMilliseconds: logCategory === 'drawing',
   })
 
