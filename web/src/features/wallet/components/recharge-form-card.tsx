@@ -271,7 +271,7 @@ export function RechargeFormCard({
                             className='text-muted-foreground mt-1.5 w-full text-xs sm:mt-2'
                             data-preset-payment-amount='true'
                           >
-                            ¥{formatCurrency(actualPrice)}
+                            {t('Pay')} ¥{formatCurrency(actualPrice)}
                           </div>
                         </Button>
                       )

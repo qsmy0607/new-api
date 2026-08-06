@@ -168,8 +168,8 @@ describe('recharge form card', () => {
       '[data-preset-payment-amount="true"]'
     )
     assert.ok(paymentAmount)
-    assert.equal(paymentAmount.textContent?.trim(), '¥500')
-    assert.equal(paymentAmount.textContent?.includes('Pay'), false)
+    assert.equal(paymentAmount.textContent?.trim(), 'Pay ¥500')
+    assert.equal(paymentAmount.textContent?.includes('Pay'), true)
     assert.equal(container.querySelector('[data-preset-savings="true"]'), null)
 
     await act(async () => root.unmount())
