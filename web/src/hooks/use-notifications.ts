@@ -17,11 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
-import { useState, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { shouldAutoOpenNotice } from '@/hooks/notification-auto-open'
 import { useStatus } from '@/hooks/use-status'
 import { getNotice } from '@/lib/api'
 import { useNotificationStore } from '@/stores/notification-store'
+
+let autoOpenedNoticeContent = ''
 
 function hashString(input: string): string {
   let hash = 0
@@ -63,7 +66,7 @@ function getAnnouncementKey(item: Record<string, unknown>): string {
  * Provides unread counts and read status management
  */
 export function useNotifications() {
-  const [popoverOpen, setPopoverOpen] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'notice' | 'announcements'>(
     'notice'
   )
@@ -82,10 +85,13 @@ export function useNotifications() {
   // Fetch Announcements from status
   const { status, loading: statusLoading } = useStatus()
   const announcementsEnabled = status?.announcements_enabled ?? false
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const announcements: Record<string, unknown>[] = announcementsEnabled
-    ? ((status?.announcements || []) as Record<string, unknown>[]).slice(0, 20)
-    : []
+  const announcements = useMemo<Record<string, unknown>[]>(() => {
+    if (!announcementsEnabled) return []
+    return ((status?.announcements || []) as Record<string, unknown>[]).slice(
+      0,
+      20
+    )
+  }, [announcementsEnabled, status?.announcements])
 
   // Notification store
   const {
@@ -93,6 +99,7 @@ export function useNotifications() {
     markNoticeRead,
     markAnnouncementsRead,
     isAnnouncementRead,
+    closedUntilDate,
   } = useNotificationStore()
 
   // Extract notice content
@@ -119,69 +126,94 @@ export function useNotifications() {
     }
   }, [noticeContent, lastReadNotice, announcements, isAnnouncementRead])
 
-  const markAnnouncementsAsRead = () => {
+  const markAnnouncementsAsRead = useCallback(() => {
     if (announcements.length > 0) {
       const allKeys = announcements.map((item: Record<string, unknown>) =>
         getAnnouncementKey(item)
       )
       markAnnouncementsRead(allKeys)
     }
-  }
+  }, [announcements, markAnnouncementsRead])
 
-  // Handle popover open
-  const handleOpenPopover = (tab?: 'notice' | 'announcements') => {
-    const nextTab = tab || activeTab
+  const markTabAsRead = useCallback(
+    (tab: 'notice' | 'announcements') => {
+      if (tab === 'notice' && noticeContent) {
+        markNoticeRead(noticeContent)
+      } else if (tab === 'announcements') {
+        markAnnouncementsAsRead()
+      }
+    },
+    [markAnnouncementsAsRead, markNoticeRead, noticeContent]
+  )
 
-    // Mark currently visible content as read when opening the notification center
-    if (noticeContent) {
-      markNoticeRead(noticeContent)
-    }
-    if (nextTab === 'announcements') {
-      markAnnouncementsAsRead()
-    }
+  const handleOpenDialog = useCallback(
+    (tab?: 'notice' | 'announcements') => {
+      const nextTab = tab || activeTab
 
-    setActiveTab(nextTab)
-    setPopoverOpen(true)
-  }
+      if (nextTab === 'notice' && noticeContent) {
+        autoOpenedNoticeContent = noticeContent
+      }
+      markTabAsRead(nextTab)
 
-  const handlePopoverOpenChange = (open: boolean) => {
-    if (open) {
-      handleOpenPopover(activeTab)
+      setActiveTab(nextTab)
+      setDialogOpen(true)
+    },
+    [activeTab, markTabAsRead, noticeContent]
+  )
+
+  const loading = noticeLoading || statusLoading
+
+  useEffect(() => {
+    if (
+      !shouldAutoOpenNotice({
+        noticeContent,
+        loading,
+        closedUntilDate,
+        autoOpenedNoticeContent,
+        today: new Date().toDateString(),
+      })
+    ) {
       return
     }
 
-    setPopoverOpen(false)
+    handleOpenDialog('notice')
+  }, [closedUntilDate, handleOpenDialog, loading, noticeContent])
+
+  const handleDialogOpenChange = (open: boolean) => {
+    if (open) {
+      handleOpenDialog(activeTab)
+      return
+    }
+
+    setDialogOpen(false)
   }
 
   // Handle tab change - mark announcements as read when switching to that tab
   const handleTabChange = (tab: 'notice' | 'announcements') => {
     setActiveTab(tab)
-
-    if (tab === 'announcements') {
-      markAnnouncementsAsRead()
-    }
+    markTabAsRead(tab)
   }
 
   return {
     // Data
     notice: noticeContent,
     announcements,
-    loading: noticeLoading || statusLoading,
+    loading,
 
     // Unread counts
     unreadCount: unreadCounts.total,
     unreadNoticeCount: unreadCounts.notice,
     unreadAnnouncementsCount: unreadCounts.announcements,
 
-    // Popover state
-    popoverOpen,
-    setPopoverOpen: handlePopoverOpenChange,
+    // Popover state (the notification center now renders as a dialog)
+    popoverOpen: dialogOpen,
+    setPopoverOpen: handleDialogOpenChange,
     activeTab,
     setActiveTab: handleTabChange,
 
     // Actions
-    openPopover: handleOpenPopover,
-    closePopover: () => setPopoverOpen(false),
+    openPopover: handleOpenDialog,
+    closePopover: () => setDialogOpen(false),
     refetchNotice,
   }
 }

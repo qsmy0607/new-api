@@ -22,6 +22,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	emailDomainNotAllowedCode = "EMAIL_DOMAIN_NOT_ALLOWED"
+	emailAliasNotAllowedCode  = "EMAIL_ALIAS_NOT_ALLOWED"
+)
+
 func TestStatus(c *gin.Context) {
 	err := model.PingDB()
 	if err != nil {
@@ -261,7 +266,8 @@ func SendEmailVerification(c *gin.Context) {
 		if !allowed {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "The administrator has enabled the email domain name whitelist, and your email address is not allowed due to special symbols or it's not in the whitelist.",
+				"code":    emailDomainNotAllowedCode,
+				"message": common.TranslateMessage(c, i18n.MsgUserEmailDomainNotAllowed),
 			})
 			return
 		}
@@ -271,7 +277,8 @@ func SendEmailVerification(c *gin.Context) {
 		if containsSpecialSymbols {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "管理员已启用邮箱地址别名限制，您的邮箱地址由于包含特殊符号而被拒绝。",
+				"code":    emailAliasNotAllowedCode,
+				"message": common.TranslateMessage(c, i18n.MsgUserEmailAliasNotAllowed),
 			})
 			return
 		}

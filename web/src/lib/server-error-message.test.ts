@@ -38,6 +38,17 @@ describe('server error message mapping', () => {
     assert.equal(getServerErrorMessageKey({ code: 'UNKNOWN_CODE' }), null)
   })
 
+  test('maps email registration restrictions to translatable message keys', () => {
+    assert.equal(
+      getServerErrorMessageKey({ code: 'EMAIL_DOMAIN_NOT_ALLOWED' }),
+      'This email address does not meet the registration requirements. Please register with an allowed email domain.'
+    )
+    assert.equal(
+      getServerErrorMessageKey({ code: 'EMAIL_ALIAS_NOT_ALLOWED' }),
+      'This email address contains a disallowed alias character. Make sure the part before "@" does not contain "+" or ".".'
+    )
+  })
+
   test('maps stable Telegram bind errors without exposing server text', () => {
     const expected = {
       TELEGRAM_BIND_DISABLED: 'Telegram binding is disabled.',

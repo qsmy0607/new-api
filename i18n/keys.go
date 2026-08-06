@@ -88,6 +88,8 @@ const (
 	MsgUserSessionSaveFailed         = "user.session_save_failed"
 	MsgUserRequire2FA                = "user.require_2fa"
 	MsgUserEmailVerificationRequired = "user.email_verification_required"
+	MsgUserEmailDomainNotAllowed     = "user.email_domain_not_allowed"
+	MsgUserEmailAliasNotAllowed      = "user.email_alias_not_allowed"
 	MsgUserVerificationCodeError     = "user.verification_code_error"
 	MsgUserEmailAlreadyTaken         = "user.email_already_taken"
 	MsgUserPasswordUnset             = "user.password_unset"
