@@ -45,18 +45,14 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  getAnnouncementKey,
+  type NotificationAnnouncement,
+} from '@/hooks/notification-unread'
 import { getAnnouncementColorClass } from '@/lib/colors'
 import { formatDateTimeObject } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useNotificationStore } from '@/stores/notification-store'
-
-interface AnnouncementItem {
-  id?: number | string
-  type?: string
-  content?: string
-  extra?: string
-  publishDate?: string | Date
-}
 
 interface NotificationPopoverProps {
   open: boolean
@@ -65,7 +61,7 @@ interface NotificationPopoverProps {
   activeTab: 'notice' | 'announcements'
   onTabChange: (tab: 'notice' | 'announcements') => void
   notice: string
-  announcements: AnnouncementItem[]
+  announcements: NotificationAnnouncement[]
   loading: boolean
   className?: string
 }
@@ -143,19 +139,6 @@ function AnnouncementDot({ type }: { type?: string }) {
   )
 }
 
-function getAnnouncementRenderKey(announcement: AnnouncementItem): string {
-  if (announcement.id !== undefined && announcement.id !== null) {
-    return `id:${announcement.id}`
-  }
-
-  return JSON.stringify({
-    content: announcement.content ?? '',
-    extra: announcement.extra ?? '',
-    publishDate: announcement.publishDate ?? '',
-    type: announcement.type ?? '',
-  })
-}
-
 /**
  * Empty state component
  */
@@ -224,10 +207,14 @@ function NoticeContent({
  */
 function AnnouncementsContent({
   announcements,
+  readAnnouncementKeys,
+  onAnnouncementRead,
   loading,
   t,
 }: {
-  announcements: AnnouncementItem[]
+  announcements: NotificationAnnouncement[]
+  readAnnouncementKeys: string[]
+  onAnnouncementRead: (key: string) => void
   loading: boolean
   t: TFunction
 }) {
@@ -254,7 +241,8 @@ function AnnouncementsContent({
     <ScrollArea className={notificationContentAreaClassName}>
       <div className='flex flex-col'>
         {announcements.map((item, idx) => {
-          const announcementKey = getAnnouncementRenderKey(item)
+          const announcementKey = getAnnouncementKey(item)
+          const isRead = readAnnouncementKeys.includes(announcementKey)
           const publishDate = item.publishDate
             ? new Date(item.publishDate)
             : null
@@ -267,7 +255,33 @@ function AnnouncementsContent({
 
           return (
             <div key={announcementKey}>
-              <div className='py-3'>
+              <div
+                className={cn(
+                  '-mx-2 rounded-md px-2 py-3 transition-colors',
+                  !isRead &&
+                    'bg-muted/40 hover:bg-muted/60 focus-visible:ring-ring/50 cursor-pointer outline-none focus-visible:ring-[3px]'
+                )}
+                role={isRead ? undefined : 'button'}
+                tabIndex={isRead ? undefined : 0}
+                aria-label={isRead ? undefined : t('Mark announcement as read')}
+                onClick={() => {
+                  if (!isRead) {
+                    onAnnouncementRead(announcementKey)
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    isRead ||
+                    event.target !== event.currentTarget ||
+                    (event.key !== 'Enter' && event.key !== ' ')
+                  ) {
+                    return
+                  }
+
+                  event.preventDefault()
+                  onAnnouncementRead(announcementKey)
+                }}
+              >
                 <div className='flex items-start gap-3'>
                   <AnnouncementDot type={item.type} />
                   <div className='flex min-w-0 flex-1 flex-col gap-2'>
@@ -317,10 +331,20 @@ export function NotificationPopover({
   const setClosedUntilDate = useNotificationStore(
     (state) => state.setClosedUntilDate
   )
+  const readAnnouncementKeys = useNotificationStore(
+    (state) => state.readAnnouncementKeys
+  )
+  const markAnnouncementsRead = useNotificationStore(
+    (state) => state.markAnnouncementsRead
+  )
 
   const handleCloseToday = () => {
     setClosedUntilDate(new Date().toDateString())
     onOpenChange(false)
+  }
+
+  const handleAnnouncementRead = (key: string) => {
+    markAnnouncementsRead([key])
   }
 
   return (
@@ -391,6 +415,8 @@ export function NotificationPopover({
             <TabsContent value='announcements'>
               <AnnouncementsContent
                 announcements={announcements}
+                readAnnouncementKeys={readAnnouncementKeys}
+                onAnnouncementRead={handleAnnouncementRead}
                 loading={loading}
                 t={t}
               />

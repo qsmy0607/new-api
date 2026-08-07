@@ -2585,6 +2585,7 @@
     "Map request model names to actual provider model names (JSON format)": "將請求模型名稱映射到實際供應商模型名稱 (JSON 格式)",
     "Map response status codes (JSON format)": "映射回應狀態碼（JSON 格式）",
     "Map upstream status codes to different codes": "將上游狀態碼映射到不同的代碼",
+    "Mark announcement as read": "將公告標記為已讀",
     "Market Share": "市場份額",
     "Marketing": "市場營銷",
     "Master instances run scheduled background tasks.": "master 實例執行排程背景任務。",

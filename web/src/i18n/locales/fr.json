@@ -2585,6 +2585,7 @@
     "Map request model names to actual provider model names (JSON format)": "Mapper les noms de modèles de requête aux noms réels de modèles du fournisseur (format JSON)",
     "Map response status codes (JSON format)": "Mapper les codes de statut de réponse (format JSON)",
     "Map upstream status codes to different codes": "Mapper les codes de statut amont à différents codes",
+    "Mark announcement as read": "Marquer l’annonce comme lue",
     "Market Share": "Part de marché",
     "Marketing": "Marketing",
     "Master instances run scheduled background tasks.": "Les instances master exécutent les tâches planifiées en arrière-plan.",

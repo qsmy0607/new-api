@@ -20,46 +20,15 @@ import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { shouldAutoOpenNotice } from '@/hooks/notification-auto-open'
+import {
+  getUnreadNotificationCounts,
+  type NotificationAnnouncement,
+} from '@/hooks/notification-unread'
 import { useStatus } from '@/hooks/use-status'
 import { getNotice } from '@/lib/api'
 import { useNotificationStore } from '@/stores/notification-store'
 
 let autoOpenedNoticeContent = ''
-
-function hashString(input: string): string {
-  let hash = 0
-  if (!input) return '0'
-
-  for (let i = 0; i < input.length; i += 1) {
-    const chr = input.charCodeAt(i)
-    hash = (hash << 5) - hash + chr
-    hash |= 0
-  }
-
-  return hash.toString(36)
-}
-
-/**
- * Generate a unique key for an announcement
- * Prefer backend id, fall back to a content hash so edits register
- */
-function getAnnouncementKey(item: Record<string, unknown>): string {
-  if (!item) return ''
-
-  if (item.id !== undefined && item.id !== null) {
-    return `id:${item.id}`
-  }
-
-  const fingerprint = JSON.stringify({
-    publishDate: (item?.publishDate as string) || '',
-    content: ((item?.content as string) || '').trim(),
-    extra: ((item?.extra as string) || '').trim(),
-    type: (item?.type as string) || '',
-    title: ((item?.title as string) || '').trim(),
-    link: ((item?.link as string) || '').trim(),
-  })
-  return `hash:${hashString(fingerprint)}`
-}
 
 /**
  * Hook to manage notifications (Notice + Announcements)
@@ -85,9 +54,9 @@ export function useNotifications() {
   // Fetch Announcements from status
   const { status, loading: statusLoading } = useStatus()
   const announcementsEnabled = status?.announcements_enabled ?? false
-  const announcements = useMemo<Record<string, unknown>[]>(() => {
+  const announcements = useMemo<NotificationAnnouncement[]>(() => {
     if (!announcementsEnabled) return []
-    return ((status?.announcements || []) as Record<string, unknown>[]).slice(
+    return ((status?.announcements || []) as NotificationAnnouncement[]).slice(
       0,
       20
     )
@@ -96,9 +65,8 @@ export function useNotifications() {
   // Notification store
   const {
     lastReadNotice,
+    readAnnouncementKeys,
     markNoticeRead,
-    markAnnouncementsRead,
-    isAnnouncementRead,
     closedUntilDate,
   } = useNotificationStore()
 
@@ -108,43 +76,18 @@ export function useNotifications() {
     : ''
 
   // Calculate unread counts
-  const unreadCounts = useMemo(() => {
-    const noticeUnread =
-      noticeContent && noticeContent !== lastReadNotice ? 1 : 0
+  const unreadCounts = getUnreadNotificationCounts({
+    noticeContent,
+    lastReadNotice,
+    announcements,
+    readAnnouncementKeys,
+  })
 
-    const announcementsUnread = announcements.filter(
-      (item: Record<string, unknown>) => {
-        const key = getAnnouncementKey(item)
-        return !isAnnouncementRead(key)
-      }
-    ).length
-
-    return {
-      notice: noticeUnread,
-      announcements: announcementsUnread,
-      total: noticeUnread + announcementsUnread,
+  const markNoticeAsRead = useCallback(() => {
+    if (noticeContent) {
+      markNoticeRead(noticeContent)
     }
-  }, [noticeContent, lastReadNotice, announcements, isAnnouncementRead])
-
-  const markAnnouncementsAsRead = useCallback(() => {
-    if (announcements.length > 0) {
-      const allKeys = announcements.map((item: Record<string, unknown>) =>
-        getAnnouncementKey(item)
-      )
-      markAnnouncementsRead(allKeys)
-    }
-  }, [announcements, markAnnouncementsRead])
-
-  const markTabAsRead = useCallback(
-    (tab: 'notice' | 'announcements') => {
-      if (tab === 'notice' && noticeContent) {
-        markNoticeRead(noticeContent)
-      } else if (tab === 'announcements') {
-        markAnnouncementsAsRead()
-      }
-    },
-    [markAnnouncementsAsRead, markNoticeRead, noticeContent]
-  )
+  }, [markNoticeRead, noticeContent])
 
   const handleOpenDialog = useCallback(
     (tab?: 'notice' | 'announcements') => {
@@ -152,13 +95,13 @@ export function useNotifications() {
 
       if (nextTab === 'notice' && noticeContent) {
         autoOpenedNoticeContent = noticeContent
+        markNoticeAsRead()
       }
-      markTabAsRead(nextTab)
 
       setActiveTab(nextTab)
       setDialogOpen(true)
     },
-    [activeTab, markTabAsRead, noticeContent]
+    [activeTab, markNoticeAsRead, noticeContent]
   )
 
   const loading = noticeLoading || statusLoading
@@ -188,10 +131,11 @@ export function useNotifications() {
     setDialogOpen(false)
   }
 
-  // Handle tab change - mark announcements as read when switching to that tab
   const handleTabChange = (tab: 'notice' | 'announcements') => {
     setActiveTab(tab)
-    markTabAsRead(tab)
+    if (tab === 'notice') {
+      markNoticeAsRead()
+    }
   }
 
   return {

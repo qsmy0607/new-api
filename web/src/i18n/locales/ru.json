@@ -2585,6 +2585,7 @@
     "Map request model names to actual provider model names (JSON format)": "Сопоставление имён моделей запроса реальным именам моделей провайдера (формат JSON)",
     "Map response status codes (JSON format)": "Сопоставить коды статусов ответа (JSON-формат)",
     "Map upstream status codes to different codes": "Сопоставить коды статуса вышестоящего сервера с различными кодами",
+    "Mark announcement as read": "Отметить объявление как прочитанное",
     "Market Share": "Доля рынка",
     "Marketing": "Маркетинг",
     "Master instances run scheduled background tasks.": "Экземпляры master выполняют плановые фоновые задачи.",

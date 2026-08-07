@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { isHttpUrl, isLikelyHtml } from '@/lib/content-format'
 
 import { getAboutContent } from './api'
+import { aboutFullWidthLayoutClasses } from './layout'
 
 function EmptyAboutState() {
   const { t } = useTranslation()
@@ -148,12 +149,14 @@ export function About() {
   if (isUrl) {
     return (
       <PublicLayout showMainContainer={false}>
-        <iframe
-          src={rawContent}
-          className='h-[calc(100vh-3.5rem)] w-full border-0'
-          title={t('About')}
-          sandbox='allow-forms allow-popups allow-popups-to-escape-sandbox allow-scripts'
-        />
+        <main className={aboutFullWidthLayoutClasses.main}>
+          <iframe
+            src={rawContent}
+            className={aboutFullWidthLayoutClasses.iframe}
+            title={t('About')}
+            sandbox='allow-forms allow-popups allow-popups-to-escape-sandbox allow-scripts'
+          />
+        </main>
       </PublicLayout>
     )
   }
@@ -161,12 +164,14 @@ export function About() {
   if (contentIsHtml) {
     return (
       <PublicLayout showMainContainer={false}>
-        <RichContent
-          mode='html'
-          htmlVariant='isolated'
-          content={rawContent}
-          className='prose-neutral dark:prose-invert max-w-none'
-        />
+        <main className={aboutFullWidthLayoutClasses.main}>
+          <RichContent
+            mode='html'
+            htmlVariant='isolated'
+            content={rawContent}
+            className='prose-neutral dark:prose-invert max-w-none'
+          />
+        </main>
       </PublicLayout>
     )
   }

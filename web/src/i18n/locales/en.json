@@ -2585,6 +2585,7 @@
     "Map request model names to actual provider model names (JSON format)": "Map request model names to actual provider model names (JSON format)",
     "Map response status codes (JSON format)": "Map response status codes (JSON format)",
     "Map upstream status codes to different codes": "Map upstream status codes to different codes",
+    "Mark announcement as read": "Mark announcement as read",
     "Market Share": "Market Share",
     "Marketing": "Marketing",
     "Master instances run scheduled background tasks.": "Master instances run scheduled background tasks.",
