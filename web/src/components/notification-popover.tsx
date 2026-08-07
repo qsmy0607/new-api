@@ -21,6 +21,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 
+import { notificationContentAreaClassName } from '@/components/notification-popover-layout'
 import { RichContent } from '@/components/rich-content'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -212,7 +213,7 @@ function NoticeContent({
   }
 
   return (
-    <ScrollArea className='h-[min(54dvh,36rem)] pr-3 sm:h-[min(58dvh,36rem)]'>
+    <ScrollArea className={notificationContentAreaClassName}>
       <RichContent breaks content={notice} />
     </ScrollArea>
   )
@@ -250,7 +251,7 @@ function AnnouncementsContent({
   }
 
   return (
-    <ScrollArea className='h-[min(54dvh,36rem)] pr-3 sm:h-[min(58dvh,36rem)]'>
+    <ScrollArea className={notificationContentAreaClassName}>
       <div className='flex flex-col'>
         {announcements.map((item, idx) => {
           const announcementKey = getAnnouncementRenderKey(item)
