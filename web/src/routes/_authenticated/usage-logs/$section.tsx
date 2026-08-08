@@ -20,6 +20,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import z from 'zod'
 
 import { UsageLogs } from '@/features/usage-logs'
+import { shouldResetUsageLogsPageOnReload } from '@/features/usage-logs/lib/page-reload'
 import {
   isUsageLogsSectionId,
   USAGE_LOGS_DEFAULT_SECTION,
@@ -51,14 +52,43 @@ const usageLogsSearchSchema = z.object({
   endTime: z.number().optional(),
 })
 
+const initialDocumentPathname =
+  typeof window === 'undefined' ? '' : window.location.pathname
+const initialNavigationEntry =
+  typeof window === 'undefined'
+    ? undefined
+    : (window.performance.getEntriesByType('navigation')[0] as
+        | PerformanceNavigationTiming
+        | undefined)
+const initialDocumentWasReload = initialNavigationEntry?.type === 'reload'
+let initialUsageLogsLoadHandled = false
+
 export const Route = createFileRoute('/_authenticated/usage-logs/$section')({
-  beforeLoad: ({ params, search }) => {
+  beforeLoad: ({ location, params, search }) => {
     if (!isUsageLogsSectionId(params.section)) {
       throw redirect({
         to: '/usage-logs/$section',
         params: { section: USAGE_LOGS_DEFAULT_SECTION },
       })
     }
+
+    const resetPage = shouldResetUsageLogsPageOnReload({
+      initialLoadHandled: initialUsageLogsLoadHandled,
+      initialPathname: initialDocumentPathname,
+      currentPathname: location.pathname,
+      page: search.page,
+      wasReload: initialDocumentWasReload,
+    })
+    initialUsageLogsLoadHandled = true
+    if (resetPage) {
+      throw redirect({
+        to: '/usage-logs/$section',
+        params: { section: params.section },
+        search: { ...search, page: undefined },
+        replace: true,
+      })
+    }
+
     // type 仅 common 使用，非 common 时清掉 URL 里的 type
     const hasTypeSearch = Array.isArray(search?.type)
       ? search.type.length > 0
