@@ -16,21 +16,32 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { CalendarDays } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import {
+  ArrowLeft01Icon,
+  ArrowLeftDoubleIcon,
+  ArrowRight01Icon,
+  ArrowRightDoubleIcon,
+  CalendarDaysIcon,
+} from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { useState } from 'react'
+import { type DateRange, type NavProps, useDayPicker } from 'react-day-picker'
+import { enUS, fr, ja, ru, vi, zhCN, zhTW } from 'react-day-picker/locale'
 import { useTranslation } from 'react-i18next'
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { useMediaQuery } from '@/hooks'
 import dayjs from '@/lib/dayjs'
 import { cn } from '@/lib/utils'
 
-import type { LogTimePreset, LogTimeSelection } from '../types'
+import type { LogTimeSelection } from '../types'
+import { TimeRangePanel } from './time-range-panel'
 
 interface CompactDateTimeRangePickerProps {
   start?: Date
@@ -39,13 +50,110 @@ interface CompactDateTimeRangePickerProps {
   className?: string
 }
 
-function toInputValue(date?: Date): string {
-  return date ? dayjs(date).format('YYYY-MM-DDTHH:mm:ss') : ''
+type PickerPanel = 'date' | 'time'
+
+const calendarLocales = {
+  en: enUS,
+  fr,
+  ru,
+  ja,
+  vi,
+} as const
+
+function CalendarRangeNav(props: NavProps) {
+  const { t } = useTranslation()
+  const { months, goToMonth } = useDayPicker()
+  const displayedMonth = months[0]?.date
+
+  return (
+    <nav className={props.className} aria-label={t('Date Range')}>
+      <div className='flex gap-0.5'>
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          className='size-(--cell-size)'
+          aria-label={t('Previous year')}
+          title={t('Previous year')}
+          disabled={!displayedMonth}
+          onClick={() => {
+            if (displayedMonth) {
+              goToMonth(dayjs(displayedMonth).subtract(1, 'year').toDate())
+            }
+          }}
+        >
+          <HugeiconsIcon icon={ArrowLeftDoubleIcon} />
+        </Button>
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          className='size-(--cell-size)'
+          aria-label={t('Previous month')}
+          title={t('Previous month')}
+          disabled={!props.previousMonth}
+          onClick={props.onPreviousClick}
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
+        </Button>
+      </div>
+      <div className='flex gap-0.5'>
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          className='size-(--cell-size)'
+          aria-label={t('Next month')}
+          title={t('Next month')}
+          disabled={!props.nextMonth}
+          onClick={props.onNextClick}
+        >
+          <HugeiconsIcon icon={ArrowRight01Icon} />
+        </Button>
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          className='size-(--cell-size)'
+          aria-label={t('Next year')}
+          title={t('Next year')}
+          disabled={!displayedMonth}
+          onClick={() => {
+            if (displayedMonth) {
+              goToMonth(dayjs(displayedMonth).add(1, 'year').toDate())
+            }
+          }}
+        >
+          <HugeiconsIcon icon={ArrowRightDoubleIcon} />
+        </Button>
+      </div>
+    </nav>
+  )
 }
 
-function fromInputValue(value: string): Date | undefined {
+const rangeCalendarComponents = { Nav: CalendarRangeNav }
+
+function toDateValue(date?: Date): string {
+  return date ? dayjs(date).format('YYYY-MM-DD') : ''
+}
+
+function toTimeValue(date?: Date): string {
+  return date ? dayjs(date).format('HH:mm:ss') : '00:00:00'
+}
+
+function fromDateValue(value: string): Date | undefined {
   if (!value) return undefined
-  const date = new Date(value)
+  const date = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return undefined
+  return dayjs(date).format('YYYY-MM-DD') === value ? date : undefined
+}
+
+function fromDateAndTime(
+  dateValue: string,
+  timeValue: string
+): Date | undefined {
+  if (!fromDateValue(dateValue)) return undefined
+  const date = new Date(`${dateValue}T${timeValue || '00:00:00'}`)
   return Number.isNaN(date.getTime()) ? undefined : date
 }
 
@@ -55,148 +163,196 @@ export function CompactDateTimeRangePicker({
   onChange,
   className,
 }: CompactDateTimeRangePickerProps) {
-  const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
-  const [draftStart, setDraftStart] = useState(toInputValue(start))
-  const [draftEnd, setDraftEnd] = useState(toInputValue(end))
+  const { t, i18n } = useTranslation()
+  const isNarrow = useMediaQuery('(max-width: 767px)')
+  const [openPanel, setOpenPanel] = useState<PickerPanel | null>(null)
+  const [draftStartDate, setDraftStartDate] = useState(toDateValue(start))
+  const [draftStartTime, setDraftStartTime] = useState(toTimeValue(start))
+  const [draftEndDate, setDraftEndDate] = useState(toDateValue(end))
+  const [draftEndTime, setDraftEndTime] = useState(toTimeValue(end))
 
-  const label = useMemo(() => {
-    if (!start && !end) return t('Date Range')
-    const startText = start ? dayjs(start).format('YYYY-MM-DD HH:mm:ss') : '-'
-    const endText = end ? dayjs(end).format('YYYY-MM-DD HH:mm:ss') : '-'
-    return `${startText} ~ ${endText}`
-  }, [end, start, t])
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      setDraftStart(toInputValue(start))
-      setDraftEnd(toInputValue(end))
-    }
-    setOpen(nextOpen)
+  const selectedStart = fromDateValue(draftStartDate)
+  const selectedEnd = fromDateValue(draftEndDate)
+  const selectedRange: DateRange | undefined = selectedStart
+    ? { from: selectedStart, to: selectedEnd }
+    : undefined
+  const language = (
+    i18n.resolvedLanguage ||
+    i18n.language ||
+    'en'
+  ).toLowerCase()
+  const isTraditionalChinese =
+    language.startsWith('zh-tw') ||
+    language.startsWith('zh-hk') ||
+    language.startsWith('zh-mo') ||
+    language.startsWith('zh-hant')
+  let calendarLocale = enUS
+  if (language.startsWith('zh')) {
+    calendarLocale = isTraditionalChinese ? zhTW : zhCN
+  } else {
+    const languageCode = language.split('-')[0]
+    calendarLocale =
+      calendarLocales[languageCode as keyof typeof calendarLocales] ?? enUS
   }
 
-  const applyDraft = () => {
+  const hasRangeValue = !!start || !!end
+  const startDateText = start ? dayjs(start).format('YYYY-MM-DD') : '-'
+  const startTimeText = start ? dayjs(start).format('HH:mm:ss') : '--:--:--'
+  const endDateText = end ? dayjs(end).format('YYYY-MM-DD') : '-'
+  const endTimeText = end ? dayjs(end).format('HH:mm:ss') : '--:--:--'
+
+  const updateSelection = (
+    startDateValue: string,
+    startTimeValue: string,
+    endDateValue: string,
+    endTimeValue: string
+  ) => {
     onChange({
       kind: 'custom',
-      start: fromInputValue(draftStart),
-      end: fromInputValue(draftEnd),
+      start: fromDateAndTime(startDateValue, startTimeValue),
+      end: fromDateAndTime(endDateValue, endTimeValue),
     })
-    setOpen(false)
   }
 
-  const applyPreset = (preset: LogTimePreset) => {
-    onChange({ kind: 'preset', preset })
-    setOpen(false)
+  const handlePanelOpenChange = (
+    targetPanel: PickerPanel,
+    nextOpen: boolean
+  ) => {
+    if (!nextOpen) {
+      setOpenPanel((currentPanel) =>
+        currentPanel === targetPanel ? null : currentPanel
+      )
+      return
+    }
+
+    setDraftStartDate(toDateValue(start))
+    setDraftStartTime(toTimeValue(start))
+    setDraftEndDate(toDateValue(end))
+    setDraftEndTime(toTimeValue(end))
+    setOpenPanel(targetPanel)
+  }
+
+  const handleRangeSelect = (range: DateRange | undefined) => {
+    const nextStartDate = toDateValue(range?.from)
+    const nextEndDate = toDateValue(range?.to)
+    setDraftStartDate(nextStartDate)
+    setDraftEndDate(nextEndDate)
+    updateSelection(nextStartDate, draftStartTime, nextEndDate, draftEndTime)
+  }
+
+  const handleStartTimeChange = (nextStartTime: string) => {
+    setDraftStartTime(nextStartTime)
+    updateSelection(draftStartDate, nextStartTime, draftEndDate, draftEndTime)
+  }
+
+  const handleEndTimeChange = (nextEndTime: string) => {
+    setDraftEndTime(nextEndTime)
+    updateSelection(draftStartDate, draftStartTime, draftEndDate, nextEndTime)
   }
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger
-        render={
-          <Button
+    <div
+      role='group'
+      aria-label={t('Date Range')}
+      className={cn(
+        buttonVariants({ variant: 'outline', size: 'lg' }),
+        'w-full justify-start gap-1 overflow-hidden px-2.5 text-sm leading-5 font-normal tabular-nums',
+        !hasRangeValue && 'text-muted-foreground',
+        className
+      )}
+    >
+      <HugeiconsIcon
+        icon={CalendarDaysIcon}
+        data-icon='inline-start'
+        className='text-muted-foreground'
+      />
+      <Popover
+        open={openPanel === 'date'}
+        onOpenChange={(nextOpen) => handlePanelOpenChange('date', nextOpen)}
+      >
+        <PopoverTrigger
+          render={
+            <button
+              type='button'
+              className='hover:text-primary focus-visible:ring-ring/50 min-w-0 shrink rounded-sm outline-none hover:underline focus-visible:ring-2'
+              aria-label={`${t('Start Time')}: ${t('Select date')}`}
+            />
+          }
+        >
+          <span className='truncate'>
+            {hasRangeValue ? startDateText : t('Date Range')}
+          </span>
+        </PopoverTrigger>
+        <PopoverContent
+          align='start'
+          className='w-[min(420px,calc(100vw-1rem))] p-2'
+        >
+          <div className='overflow-x-auto'>
+            <Calendar
+              mode='range'
+              selected={selectedRange}
+              onSelect={handleRangeSelect}
+              defaultMonth={selectedStart ?? new Date()}
+              numberOfMonths={isNarrow ? 1 : 2}
+              pagedNavigation={!isNarrow}
+              fixedWeeks
+              locale={calendarLocale}
+              components={rangeCalendarComponents}
+              className='mx-auto p-0 [--cell-size:--spacing(6)]'
+            />
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {hasRangeValue && (
+        <>
+          <Popover
+            open={openPanel === 'time'}
+            onOpenChange={(nextOpen) => handlePanelOpenChange('time', nextOpen)}
+          >
+            <PopoverTrigger
+              render={
+                <button
+                  type='button'
+                  className='hover:text-primary focus-visible:ring-ring/50 shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2'
+                  aria-label={t('Start Time')}
+                />
+              }
+            >
+              {startTimeText}
+            </PopoverTrigger>
+            <PopoverContent
+              align='end'
+              className='w-[min(420px,calc(100vw-1rem))] p-2'
+            >
+              <TimeRangePanel
+                startTime={draftStartTime}
+                endTime={draftEndTime}
+                onStartTimeChange={handleStartTimeChange}
+                onEndTimeChange={handleEndTimeChange}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <span className='text-muted-foreground shrink-0'>~</span>
+          <button
             type='button'
-            variant='outline'
-            className={cn(
-              'w-full justify-start gap-2 px-2.5 text-sm leading-5 font-normal tabular-nums',
-              !start && !end && 'text-muted-foreground',
-              className
-            )}
-          />
-        }
-      >
-        <CalendarDays className='text-muted-foreground size-4 shrink-0' />
-        <span className='truncate'>{label}</span>
-      </PopoverTrigger>
-      <PopoverContent
-        align='start'
-        className='w-[min(520px,calc(100vw-2rem))] p-3'
-      >
-        <div className='space-y-3'>
-          <div className='grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-end'>
-            <div className='space-y-1.5'>
-              <div className='text-muted-foreground text-xs'>
-                {t('Start Time')}
-              </div>
-              <Input
-                type='datetime-local'
-                step={1}
-                value={draftStart}
-                onChange={(e) => setDraftStart(e.target.value)}
-                className='h-8 text-sm leading-5 tabular-nums'
-              />
-            </div>
-            <span className='text-muted-foreground hidden pb-2 text-xs sm:block'>
-              ~
-            </span>
-            <div className='space-y-1.5'>
-              <div className='text-muted-foreground text-xs'>
-                {t('End Time')}
-              </div>
-              <Input
-                type='datetime-local'
-                step={1}
-                value={draftEnd}
-                onChange={(e) => setDraftEnd(e.target.value)}
-                className='h-8 text-sm leading-5 tabular-nums'
-              />
-            </div>
-          </div>
-
-          <div className='flex flex-wrap gap-1.5'>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('today')}
-            >
-              {t('Today')}
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('last7Days')}
-            >
-              {t('7 Days')}
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('thisWeek')}
-            >
-              {t('This week')}
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('last30Days')}
-            >
-              {t('30 Days')}
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('thisMonth')}
-            >
-              {t('This month')}
-            </Button>
-          </div>
-
-          <div className='flex justify-end'>
-            <Button size='sm' className='h-8' onClick={applyDraft}>
-              {t('Confirm')}
-            </Button>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+            className='hover:text-primary focus-visible:ring-ring/50 shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2'
+            aria-label={`${t('End Time')}: ${t('Select date')}`}
+            onClick={() => handlePanelOpenChange('date', true)}
+          >
+            {endDateText}
+          </button>
+          <button
+            type='button'
+            className='hover:text-primary focus-visible:ring-ring/50 shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2'
+            aria-label={t('End Time')}
+            onClick={() => handlePanelOpenChange('time', true)}
+          >
+            {endTimeText}
+          </button>
+        </>
+      )}
+    </div>
   )
 }
