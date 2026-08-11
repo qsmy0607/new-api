@@ -24,7 +24,7 @@ import {
   CalendarDaysIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { useState } from 'react'
+import { type MouseEvent, useRef, useState } from 'react'
 import { type DateRange, type NavProps, useDayPicker } from 'react-day-picker'
 import { enUS, fr, ja, ru, vi, zhCN, zhTW } from 'react-day-picker/locale'
 import { useTranslation } from 'react-i18next'
@@ -40,13 +40,14 @@ import { useMediaQuery } from '@/hooks'
 import dayjs from '@/lib/dayjs'
 import { cn } from '@/lib/utils'
 
-import type { LogTimeSelection } from '../types'
+import type { LogTimePreset, LogTimeSelection } from '../types'
 import { TimeRangePanel } from './time-range-panel'
 
 interface CompactDateTimeRangePickerProps {
   start?: Date
   end?: Date
   onChange: (selection: LogTimeSelection) => void
+  showQuickRanges?: boolean
   className?: string
 }
 
@@ -161,10 +162,12 @@ export function CompactDateTimeRangePicker({
   start,
   end,
   onChange,
+  showQuickRanges = false,
   className,
 }: CompactDateTimeRangePickerProps) {
   const { t, i18n } = useTranslation()
   const isNarrow = useMediaQuery('(max-width: 767px)')
+  const pickerRef = useRef<HTMLDivElement>(null)
   const [openPanel, setOpenPanel] = useState<PickerPanel | null>(null)
   const [draftStartDate, setDraftStartDate] = useState(toDateValue(start))
   const [draftStartTime, setDraftStartTime] = useState(toTimeValue(start))
@@ -232,12 +235,22 @@ export function CompactDateTimeRangePicker({
     setOpenPanel(targetPanel)
   }
 
+  const handlePickerClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.target as Node)) return
+    handlePanelOpenChange('date', openPanel !== 'date')
+  }
+
   const handleRangeSelect = (range: DateRange | undefined) => {
     const nextStartDate = toDateValue(range?.from)
     const nextEndDate = toDateValue(range?.to)
     setDraftStartDate(nextStartDate)
     setDraftEndDate(nextEndDate)
     updateSelection(nextStartDate, draftStartTime, nextEndDate, draftEndTime)
+  }
+
+  const handleQuickRangeSelect = (preset: LogTimePreset) => {
+    onChange({ kind: 'preset', preset })
+    setOpenPanel(null)
   }
 
   const handleStartTimeChange = (nextStartTime: string) => {
@@ -252,11 +265,13 @@ export function CompactDateTimeRangePicker({
 
   return (
     <div
+      ref={pickerRef}
       role='group'
       aria-label={t('Date Range')}
+      onClick={handlePickerClick}
       className={cn(
         buttonVariants({ variant: 'outline', size: 'lg' }),
-        'w-full justify-start gap-1 overflow-hidden px-2.5 text-sm leading-5 font-normal tabular-nums',
+        'w-full cursor-pointer justify-start gap-1 overflow-hidden px-2.5 text-sm leading-5 font-normal tabular-nums',
         !hasRangeValue && 'text-muted-foreground',
         className
       )}
@@ -268,7 +283,19 @@ export function CompactDateTimeRangePicker({
       />
       <Popover
         open={openPanel === 'date'}
-        onOpenChange={(nextOpen) => handlePanelOpenChange('date', nextOpen)}
+        onOpenChange={(nextOpen, eventDetails) => {
+          const eventTarget = eventDetails.event.target
+          if (
+            !nextOpen &&
+            eventDetails.reason === 'outside-press' &&
+            eventTarget instanceof Node &&
+            pickerRef.current?.contains(eventTarget)
+          ) {
+            eventDetails.cancel()
+            return
+          }
+          handlePanelOpenChange('date', nextOpen)
+        }}
       >
         <PopoverTrigger
           render={
@@ -276,6 +303,7 @@ export function CompactDateTimeRangePicker({
               type='button'
               className='hover:text-primary focus-visible:ring-ring/50 min-w-0 shrink rounded-sm outline-none hover:underline focus-visible:ring-2'
               aria-label={`${t('Start Time')}: ${t('Select date')}`}
+              onClick={(event) => event.stopPropagation()}
             />
           }
         >
@@ -301,6 +329,34 @@ export function CompactDateTimeRangePicker({
               className='mx-auto p-0 [--cell-size:--spacing(6)]'
             />
           </div>
+          {showQuickRanges && (
+            <div className='mt-2 grid grid-cols-3 gap-1 border-t pt-2'>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                onClick={() => handleQuickRangeSelect('yesterday')}
+              >
+                {t('Yesterday')}
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                onClick={() => handleQuickRangeSelect('last30Days')}
+              >
+                {t('Last 30 days')}
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                onClick={() => handleQuickRangeSelect('thisMonth')}
+              >
+                {t('This month')}
+              </Button>
+            </div>
+          )}
         </PopoverContent>
       </Popover>
 
@@ -316,6 +372,7 @@ export function CompactDateTimeRangePicker({
                   type='button'
                   className='hover:text-primary focus-visible:ring-ring/50 shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2'
                   aria-label={t('Start Time')}
+                  onClick={(event) => event.stopPropagation()}
                 />
               }
             >
@@ -339,7 +396,10 @@ export function CompactDateTimeRangePicker({
             type='button'
             className='hover:text-primary focus-visible:ring-ring/50 shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2'
             aria-label={`${t('End Time')}: ${t('Select date')}`}
-            onClick={() => handlePanelOpenChange('date', true)}
+            onClick={(event) => {
+              event.stopPropagation()
+              handlePanelOpenChange('date', openPanel !== 'date')
+            }}
           >
             {endDateText}
           </button>
@@ -347,7 +407,10 @@ export function CompactDateTimeRangePicker({
             type='button'
             className='hover:text-primary focus-visible:ring-ring/50 shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2'
             aria-label={t('End Time')}
-            onClick={() => handlePanelOpenChange('time', true)}
+            onClick={(event) => {
+              event.stopPropagation()
+              handlePanelOpenChange('time', openPanel !== 'time')
+            }}
           >
             {endTimeText}
           </button>

@@ -151,6 +151,10 @@ export function resolveLogTimeRange(
       start: now.startOf('day').toDate(),
       end: now.endOf('day').toDate(),
     },
+    yesterday: {
+      start: now.subtract(1, 'day').startOf('day').toDate(),
+      end: now.subtract(1, 'day').endOf('day').toDate(),
+    },
     last7Days: {
       start: now.subtract(6, 'day').startOf('day').toDate(),
       end: now.endOf('day').toDate(),

@@ -73,6 +73,9 @@ const enTranslation = {
   'Previous year': 'Previous year',
   'Next month': 'Next month',
   'Next year': 'Next year',
+  Yesterday: 'Yesterday',
+  'Last 30 days': 'Last 30 days',
+  'This month': 'This month',
 }
 
 const zhTranslation = {
@@ -125,6 +128,7 @@ async function renderPicker(
           start={new Date(2026, 7, 1, 0, 0, 0)}
           end={new Date(2026, 7, 15, 0, 0, 0)}
           onChange={onChange}
+          showQuickRanges
         />
       </I18nextProvider>
     )
@@ -195,6 +199,95 @@ test('selecting a calendar day immediately updates the filter range', async () =
   await cleanupPicker(root, container)
 })
 
+test('calendar trigger regions toggle the calendar', async () => {
+  const { container, root } = await renderPicker('en', () => undefined)
+  const picker = container.querySelector<HTMLDivElement>('[role="group"]')
+  const startDateTrigger = container.querySelector<HTMLButtonElement>(
+    'button[aria-label="Start Time: Select date"]'
+  )
+  const endDateTrigger = container.querySelector<HTMLButtonElement>(
+    'button[aria-label="End Time: Select date"]'
+  )
+  assert.ok(picker)
+  assert.ok(startDateTrigger)
+  assert.ok(endDateTrigger)
+
+  await act(async () => {
+    picker.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    picker.click()
+  })
+  assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'true')
+
+  await act(async () => {
+    picker.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    picker.click()
+  })
+  assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'false')
+
+  await act(async () => {
+    startDateTrigger.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true })
+    )
+    startDateTrigger.click()
+  })
+  assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'true')
+
+  await act(async () => {
+    startDateTrigger.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true })
+    )
+    startDateTrigger.click()
+  })
+  assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'false')
+
+  await act(async () => {
+    endDateTrigger.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true })
+    )
+    endDateTrigger.click()
+  })
+  assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'true')
+
+  await act(async () => {
+    endDateTrigger.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true })
+    )
+    endDateTrigger.click()
+  })
+  assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'false')
+  await cleanupPicker(root, container)
+})
+
+test('calendar quick ranges immediately apply the selected preset', async () => {
+  const quickRanges = [
+    ['Yesterday', 'yesterday'],
+    ['Last 30 days', 'last30Days'],
+    ['This month', 'thisMonth'],
+  ] as const
+
+  for (const [label, preset] of quickRanges) {
+    const changes: LogTimeSelection[] = []
+    const { container, root } = await renderPicker('en', (selection) =>
+      changes.push(selection)
+    )
+    const dateTrigger = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Start Time: Select date"]'
+    )
+    assert.ok(dateTrigger)
+    await act(async () => dateTrigger.click())
+
+    const quickRangeButton = [
+      ...document.querySelectorAll<HTMLButtonElement>('button'),
+    ].find((button) => button.textContent === label)
+    assert.ok(quickRangeButton)
+    await act(async () => quickRangeButton.click())
+
+    assert.deepEqual(changes.at(-1), { kind: 'preset', preset })
+    assert.equal(document.querySelector('[data-slot="calendar"]'), null)
+    await cleanupPicker(root, container)
+  }
+})
+
 test('selecting a time option immediately updates the filter time', async () => {
   const changes: LogTimeSelection[] = []
   const { container, root } = await renderPicker('en', (selection) =>
@@ -204,7 +297,12 @@ test('selecting a time option immediately updates the filter time', async () => 
     'button[aria-label="Start Time"]'
   )
   assert.ok(timeTrigger)
-  await act(async () => timeTrigger.click())
+  await act(async () => {
+    timeTrigger.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true })
+    )
+    timeTrigger.click()
+  })
 
   const timeColumns = document.querySelectorAll('[role="listbox"]')
   assert.equal(

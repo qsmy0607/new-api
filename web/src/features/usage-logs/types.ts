@@ -32,6 +32,7 @@ export type LogCategory = 'common' | 'drawing' | 'task'
 
 export const LOG_TIME_PRESET_VALUES = [
   'today',
+  'yesterday',
   'last7Days',
   'thisWeek',
   'last30Days',

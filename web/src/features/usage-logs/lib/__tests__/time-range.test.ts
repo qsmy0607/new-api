@@ -69,6 +69,19 @@ describe('usage log time ranges', () => {
     assert.equal(resolved.end?.getTime(), endTime)
   })
 
+  test('resolves yesterday to the complete previous local day', () => {
+    const resolved = resolveLogTimeRange(
+      { kind: 'preset', preset: 'yesterday' },
+      new Date(2026, 7, 6, 12, 30, 0)
+    )
+
+    assert.equal(resolved.start?.getTime(), new Date(2026, 7, 5).getTime())
+    assert.equal(
+      resolved.end?.getTime(),
+      new Date(2026, 7, 5, 23, 59, 59, 999).getTime()
+    )
+  })
+
   test('serializes relative presets without freezing their timestamps', () => {
     assert.deepEqual(
       buildSearchParams(
@@ -83,6 +96,13 @@ describe('usage log time ranges', () => {
         'common'
       ),
       { rangePreset: 'last7Days' }
+    )
+    assert.deepEqual(
+      buildSearchParams(
+        { timeRange: { kind: 'preset', preset: 'yesterday' } },
+        'common'
+      ),
+      { rangePreset: 'yesterday' }
     )
   })
 

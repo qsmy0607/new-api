@@ -325,6 +325,7 @@ export function CommonLogsFilterBar<TData>(
         start={resolvedTimeRange.start}
         end={resolvedTimeRange.end}
         onChange={handleTimeRangeChange}
+        showQuickRanges
       />
     </LogsFilterField>
   )
