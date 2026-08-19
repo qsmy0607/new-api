@@ -82,6 +82,41 @@ describe('usage log time ranges', () => {
     )
   })
 
+  test('resolves previous day to date using the same local time', () => {
+    const resolved = resolveLogTimeRange(
+      { kind: 'preset', preset: 'previousDayToDate' },
+      new Date(2026, 7, 20, 0, 44, 42, 123)
+    )
+
+    assert.equal(resolved.start?.getTime(), new Date(2026, 7, 19).getTime())
+    assert.equal(
+      resolved.end?.getTime(),
+      new Date(2026, 7, 19, 0, 44, 42, 123).getTime()
+    )
+  })
+
+  test('resolves previous month to date and clamps missing month-end dates', () => {
+    const september = resolveLogTimeRange(
+      { kind: 'preset', preset: 'previousMonthToDate' },
+      new Date(2026, 8, 12, 11, 35, 42, 123)
+    )
+    const marchMonthEnd = resolveLogTimeRange(
+      { kind: 'preset', preset: 'previousMonthToDate' },
+      new Date(2025, 2, 31, 11, 35, 42, 123)
+    )
+
+    assert.equal(september.start?.getTime(), new Date(2026, 7, 1).getTime())
+    assert.equal(
+      september.end?.getTime(),
+      new Date(2026, 7, 12, 11, 35, 42, 123).getTime()
+    )
+    assert.equal(marchMonthEnd.start?.getTime(), new Date(2025, 1, 1).getTime())
+    assert.equal(
+      marchMonthEnd.end?.getTime(),
+      new Date(2025, 1, 28, 11, 35, 42, 123).getTime()
+    )
+  })
+
   test('serializes relative presets without freezing their timestamps', () => {
     assert.deepEqual(
       buildSearchParams(
@@ -103,6 +138,20 @@ describe('usage log time ranges', () => {
         'common'
       ),
       { rangePreset: 'yesterday' }
+    )
+    assert.deepEqual(
+      buildSearchParams(
+        { timeRange: { kind: 'preset', preset: 'previousDayToDate' } },
+        'common'
+      ),
+      { rangePreset: 'previousDayToDate' }
+    )
+    assert.deepEqual(
+      buildSearchParams(
+        { timeRange: { kind: 'preset', preset: 'previousMonthToDate' } },
+        'common'
+      ),
+      { rangePreset: 'previousMonthToDate' }
     )
   })
 

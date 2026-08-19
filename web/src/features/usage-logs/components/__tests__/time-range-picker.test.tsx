@@ -73,9 +73,12 @@ const enTranslation = {
   'Previous year': 'Previous year',
   'Next month': 'Next month',
   'Next year': 'Next year',
+  Today: 'Today',
+  'Previous day to date': 'Previous day to date',
   Yesterday: 'Yesterday',
-  'Last 30 days': 'Last 30 days',
   'This month': 'This month',
+  'Previous month to date': 'Previous month to date',
+  '30 days': '30 days',
 }
 
 const zhTranslation = {
@@ -260,12 +263,15 @@ test('calendar trigger regions toggle the calendar', async () => {
 
 test('calendar quick ranges immediately apply the selected preset', async () => {
   const quickRanges = [
-    ['Yesterday', 'yesterday'],
-    ['Last 30 days', 'last30Days'],
-    ['This month', 'thisMonth'],
+    ['Today', 'today', 'preset'],
+    ['Previous day to date', 'previousDayToDate', 'custom'],
+    ['Yesterday', 'yesterday', 'preset'],
+    ['This month', 'thisMonth', 'preset'],
+    ['Previous month to date', 'previousMonthToDate', 'custom'],
+    ['30 days', 'last30Days', 'preset'],
   ] as const
 
-  for (const [label, preset] of quickRanges) {
+  for (const [label, preset, selectionKind] of quickRanges) {
     const changes: LogTimeSelection[] = []
     const { container, root } = await renderPicker('en', (selection) =>
       changes.push(selection)
@@ -282,10 +288,37 @@ test('calendar quick ranges immediately apply the selected preset', async () => 
     assert.ok(quickRangeButton)
     await act(async () => quickRangeButton.click())
 
-    assert.deepEqual(changes.at(-1), { kind: 'preset', preset })
+    const selection = changes.at(-1)
+    assert.equal(selection?.kind, selectionKind)
+    if (selection?.kind === 'preset') {
+      assert.equal(selection.preset, preset)
+    } else {
+      assert.ok(selection?.start)
+      assert.ok(selection.end)
+    }
     assert.equal(document.querySelector('[data-slot="calendar"]'), null)
     await cleanupPicker(root, container)
   }
+})
+
+test('calendar quick ranges use two narrow columns and three wide columns', async () => {
+  const { container, root } = await renderPicker('en', () => {})
+  const dateTrigger = container.querySelector<HTMLButtonElement>(
+    'button[aria-label="Start Time: Select date"]'
+  )
+  assert.ok(dateTrigger)
+  await act(async () => dateTrigger.click())
+
+  const todayButton = [
+    ...document.querySelectorAll<HTMLButtonElement>('button'),
+  ].find((button) => button.textContent === 'Today')
+  assert.ok(todayButton)
+  const quickRangeGrid = todayButton.parentElement
+  assert.ok(quickRangeGrid)
+  assert.equal(quickRangeGrid.classList.contains('grid-cols-2'), true)
+  assert.equal(quickRangeGrid.classList.contains('sm:grid-cols-3'), true)
+
+  await cleanupPicker(root, container)
 })
 
 test('selecting a time option immediately updates the filter time', async () => {

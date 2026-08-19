@@ -146,14 +146,20 @@ export function resolveLogTimeRange(
   }
 
   const now = dayjs(referenceDate)
+  const previousDay = now.subtract(1, 'day')
+  const previousMonth = now.subtract(1, 'month')
   const presets: Record<LogTimePreset, ResolvedLogTimeRange> = {
     today: {
       start: now.startOf('day').toDate(),
       end: now.endOf('day').toDate(),
     },
+    previousDayToDate: {
+      start: previousDay.startOf('day').toDate(),
+      end: previousDay.toDate(),
+    },
     yesterday: {
-      start: now.subtract(1, 'day').startOf('day').toDate(),
-      end: now.subtract(1, 'day').endOf('day').toDate(),
+      start: previousDay.startOf('day').toDate(),
+      end: previousDay.endOf('day').toDate(),
     },
     last7Days: {
       start: now.subtract(6, 'day').startOf('day').toDate(),
@@ -170,6 +176,10 @@ export function resolveLogTimeRange(
     thisMonth: {
       start: now.startOf('month').toDate(),
       end: now.endOf('month').toDate(),
+    },
+    previousMonthToDate: {
+      start: previousMonth.startOf('month').toDate(),
+      end: previousMonth.toDate(),
     },
   }
 

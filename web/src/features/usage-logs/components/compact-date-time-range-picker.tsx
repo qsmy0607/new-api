@@ -40,6 +40,7 @@ import { useMediaQuery } from '@/hooks'
 import dayjs from '@/lib/dayjs'
 import { cn } from '@/lib/utils'
 
+import { resolveLogTimeRange } from '../lib/utils'
 import type { LogTimePreset, LogTimeSelection } from '../types'
 import { TimeRangePanel } from './time-range-panel'
 
@@ -249,7 +250,16 @@ export function CompactDateTimeRangePicker({
   }
 
   const handleQuickRangeSelect = (preset: LogTimePreset) => {
-    onChange({ kind: 'preset', preset })
+    if (preset === 'previousDayToDate' || preset === 'previousMonthToDate') {
+      const resolvedRange = resolveLogTimeRange({ kind: 'preset', preset })
+      onChange({
+        kind: 'custom',
+        start: resolvedRange.start,
+        end: resolvedRange.end,
+      })
+    } else {
+      onChange({ kind: 'preset', preset })
+    }
     setOpenPanel(null)
   }
 
@@ -330,11 +340,30 @@ export function CompactDateTimeRangePicker({
             />
           </div>
           {showQuickRanges && (
-            <div className='mt-2 grid grid-cols-3 gap-1 border-t pt-2'>
+            <div className='mt-2 grid grid-cols-2 gap-1 border-t pt-2 sm:grid-cols-3'>
               <Button
                 type='button'
                 variant='secondary'
                 size='sm'
+                className='text-xs'
+                onClick={() => handleQuickRangeSelect('today')}
+              >
+                {t('Today')}
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                className='text-xs'
+                onClick={() => handleQuickRangeSelect('previousDayToDate')}
+              >
+                {t('Previous day to date')}
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                className='text-xs'
                 onClick={() => handleQuickRangeSelect('yesterday')}
               >
                 {t('Yesterday')}
@@ -343,17 +372,28 @@ export function CompactDateTimeRangePicker({
                 type='button'
                 variant='secondary'
                 size='sm'
-                onClick={() => handleQuickRangeSelect('last30Days')}
+                className='text-xs'
+                onClick={() => handleQuickRangeSelect('thisMonth')}
               >
-                {t('Last 30 days')}
+                {t('This month')}
               </Button>
               <Button
                 type='button'
                 variant='secondary'
                 size='sm'
-                onClick={() => handleQuickRangeSelect('thisMonth')}
+                className='text-xs'
+                onClick={() => handleQuickRangeSelect('previousMonthToDate')}
               >
-                {t('This month')}
+                {t('Previous month to date')}
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                className='text-xs'
+                onClick={() => handleQuickRangeSelect('last30Days')}
+              >
+                {t('30 days')}
               </Button>
             </div>
           )}
