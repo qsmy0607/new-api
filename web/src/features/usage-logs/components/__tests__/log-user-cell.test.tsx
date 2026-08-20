@@ -17,39 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import assert from 'node:assert/strict'
-import { after, beforeEach, describe, test } from 'node:test'
 
-import { Window } from 'happy-dom'
-
-const domWindow = new Window()
-const domGlobals = [
-  'window',
-  'document',
-  'navigator',
-  'HTMLElement',
-  'SVGElement',
-  'Node',
-  'Element',
-  'Event',
-  'CustomEvent',
-  'MutationObserver',
-  'requestAnimationFrame',
-  'cancelAnimationFrame',
-  'getComputedStyle',
-] as const
-
-for (const key of domGlobals) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value: domWindow[key],
-  })
-}
+import { beforeEach, describe, test } from 'vitest'
 
 let clipboardShouldFail = false
 let fallbackShouldSucceed = false
 const copiedValues: string[] = []
 
-Object.defineProperty(domWindow.navigator, 'clipboard', {
+Object.defineProperty(navigator, 'clipboard', {
   configurable: true,
   value: {
     writeText: async (value: string) => {
@@ -58,7 +33,7 @@ Object.defineProperty(domWindow.navigator, 'clipboard', {
     },
   },
 })
-Object.defineProperty(domWindow.document, 'execCommand', {
+Object.defineProperty(document, 'execCommand', {
   configurable: true,
   value: () => fallbackShouldSucceed,
 })
@@ -164,10 +139,6 @@ beforeEach(() => {
 })
 
 describe('log user cell', () => {
-  after(() => {
-    domWindow.close()
-  })
-
   test('copies the username from the avatar, shows success, and does not bubble', async () => {
     const historyStart = toast.getHistory().length
     const rendered = await renderUserCell()
