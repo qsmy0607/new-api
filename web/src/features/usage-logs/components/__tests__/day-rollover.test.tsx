@@ -17,33 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import assert from 'node:assert/strict'
-import { after, describe, test } from 'node:test'
 
-import { Window } from 'happy-dom'
-
-const domWindow = new Window()
-const domGlobals = [
-  'window',
-  'document',
-  'navigator',
-  'HTMLElement',
-  'SVGElement',
-  'Node',
-  'Element',
-  'Event',
-  'CustomEvent',
-  'MutationObserver',
-  'requestAnimationFrame',
-  'cancelAnimationFrame',
-  'getComputedStyle',
-] as const
-
-for (const key of domGlobals) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value: domWindow[key],
-  })
-}
+import { afterAll, describe, test } from 'vitest'
 
 const NativeDate = Date
 let currentTime = new NativeDate(2026, 7, 5, 23, 59, 59, 900).getTime()
@@ -82,12 +57,11 @@ function CurrentDayProbe() {
 }
 
 describe('usage logs day rollover', () => {
-  after(() => {
+  afterAll(() => {
     Object.defineProperty(globalThis, 'Date', {
       configurable: true,
       value: NativeDate,
     })
-    domWindow.close()
   })
 
   test('updates the current day when a background page becomes visible', async () => {

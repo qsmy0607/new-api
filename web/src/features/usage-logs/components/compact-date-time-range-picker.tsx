@@ -241,9 +241,16 @@ export function CompactDateTimeRangePicker({
     handlePanelOpenChange('date', openPanel !== 'date')
   }
 
-  const handleRangeSelect = (range: DateRange | undefined) => {
-    const nextStartDate = toDateValue(range?.from)
-    const nextEndDate = toDateValue(range?.to)
+  const handleRangeSelect = (
+    range: DateRange | undefined,
+    triggerDate: Date
+  ) => {
+    // Clicking a day while both ends are already set starts a new range from
+    // that day instead of shrinking the existing one.
+    const nextRange =
+      selectedStart && selectedEnd ? { from: triggerDate } : range
+    const nextStartDate = toDateValue(nextRange?.from)
+    const nextEndDate = toDateValue(nextRange?.to)
     setDraftStartDate(nextStartDate)
     setDraftEndDate(nextEndDate)
     updateSelection(nextStartDate, draftStartTime, nextEndDate, draftEndTime)

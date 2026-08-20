@@ -17,41 +17,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import assert from 'node:assert/strict'
-import { after, test } from 'node:test'
 
-import { Window } from 'happy-dom'
+import { fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { test } from 'vitest'
 
 import type { LogTimeSelection } from '../../types'
-
-const domWindow = new Window()
-const domGlobals = [
-  'window',
-  'document',
-  'navigator',
-  'HTMLElement',
-  'HTMLButtonElement',
-  'HTMLInputElement',
-  'SVGElement',
-  'Node',
-  'Element',
-  'Event',
-  'PointerEvent',
-  'MouseEvent',
-  'FocusEvent',
-  'CustomEvent',
-  'MutationObserver',
-  'ResizeObserver',
-  'requestAnimationFrame',
-  'cancelAnimationFrame',
-  'getComputedStyle',
-] as const
-
-for (const key of domGlobals) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value: domWindow[key],
-  })
-}
 
 const { act } = await import('react')
 const { createRoot } = await import('react-dom/client')
@@ -101,9 +72,14 @@ const reactTestGlobals = globalThis as typeof globalThis & {
 }
 reactTestGlobals.IS_REACT_ACT_ENVIRONMENT = true
 
-after(() => {
-  domWindow.close()
-})
+const quickRanges = [
+  ['Today', 'today', 'preset'],
+  ['Previous day to date', 'previousDayToDate', 'custom'],
+  ['Yesterday', 'yesterday', 'preset'],
+  ['This month', 'thisMonth', 'preset'],
+  ['Previous month to date', 'previousMonthToDate', 'custom'],
+  ['30 days', 'last30Days', 'preset'],
+] as const
 
 async function renderPicker(
   language: 'en' | 'zh-CN',
@@ -149,6 +125,7 @@ async function cleanupPicker(
 }
 
 test('selecting a calendar day immediately updates the filter range', async () => {
+  const user = userEvent.setup()
   const changes: LogTimeSelection[] = []
   const { container, root } = await renderPicker('en', (selection) =>
     changes.push(selection)
@@ -175,7 +152,7 @@ test('selecting a calendar day immediately updates the filter range', async () =
       ?.textContent,
     '00:00:00'
   )
-  await act(async () => dateTrigger.click())
+  await user.click(dateTrigger)
 
   assert.equal(
     document.querySelectorAll('[data-slot="calendar"] table').length,
@@ -188,7 +165,7 @@ test('selecting a calendar day immediately updates the filter range', async () =
     'button[data-day="8/10/2026"]'
   )
   assert.ok(selectedDay)
-  await act(async () => selectedDay.click())
+  await user.click(selectedDay)
 
   const selection = changes.at(-1)
   assert.equal(selection?.kind, 'custom')
@@ -216,62 +193,46 @@ test('calendar trigger regions toggle the calendar', async () => {
   assert.ok(endDateTrigger)
 
   await act(async () => {
-    picker.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-    picker.click()
+    fireEvent.pointerDown(picker)
+    fireEvent.click(picker)
   })
   assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'true')
 
   await act(async () => {
-    picker.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-    picker.click()
+    fireEvent.pointerDown(picker)
+    fireEvent.click(picker)
   })
   assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'false')
 
   await act(async () => {
-    startDateTrigger.dispatchEvent(
-      new PointerEvent('pointerdown', { bubbles: true })
-    )
-    startDateTrigger.click()
+    fireEvent.pointerDown(startDateTrigger)
+    fireEvent.click(startDateTrigger)
   })
   assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'true')
 
   await act(async () => {
-    startDateTrigger.dispatchEvent(
-      new PointerEvent('pointerdown', { bubbles: true })
-    )
-    startDateTrigger.click()
+    fireEvent.pointerDown(startDateTrigger)
+    fireEvent.click(startDateTrigger)
   })
   assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'false')
 
   await act(async () => {
-    endDateTrigger.dispatchEvent(
-      new PointerEvent('pointerdown', { bubbles: true })
-    )
-    endDateTrigger.click()
+    fireEvent.pointerDown(endDateTrigger)
+    fireEvent.click(endDateTrigger)
   })
   assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'true')
 
   await act(async () => {
-    endDateTrigger.dispatchEvent(
-      new PointerEvent('pointerdown', { bubbles: true })
-    )
-    endDateTrigger.click()
+    fireEvent.pointerDown(endDateTrigger)
+    fireEvent.click(endDateTrigger)
   })
   assert.equal(startDateTrigger.getAttribute('aria-expanded'), 'false')
   await cleanupPicker(root, container)
 })
 
-test('calendar quick ranges immediately apply the selected preset', async () => {
-  const quickRanges = [
-    ['Today', 'today', 'preset'],
-    ['Previous day to date', 'previousDayToDate', 'custom'],
-    ['Yesterday', 'yesterday', 'preset'],
-    ['This month', 'thisMonth', 'preset'],
-    ['Previous month to date', 'previousMonthToDate', 'custom'],
-    ['30 days', 'last30Days', 'preset'],
-  ] as const
-
-  for (const [label, preset, selectionKind] of quickRanges) {
+test.each(quickRanges)(
+  'calendar quick range %s immediately applies the selected preset',
+  async (label, preset, selectionKind) => {
     const changes: LogTimeSelection[] = []
     const { container, root } = await renderPicker('en', (selection) =>
       changes.push(selection)
@@ -299,7 +260,7 @@ test('calendar quick ranges immediately apply the selected preset', async () => 
     assert.equal(document.querySelector('[data-slot="calendar"]'), null)
     await cleanupPicker(root, container)
   }
-})
+)
 
 test('calendar quick ranges use two narrow columns and three wide columns', async () => {
   const { container, root } = await renderPicker('en', () => {})
@@ -331,10 +292,8 @@ test('selecting a time option immediately updates the filter time', async () => 
   )
   assert.ok(timeTrigger)
   await act(async () => {
-    timeTrigger.dispatchEvent(
-      new PointerEvent('pointerdown', { bubbles: true })
-    )
-    timeTrigger.click()
+    fireEvent.pointerDown(timeTrigger)
+    fireEvent.click(timeTrigger)
   })
 
   const timeColumns = document.querySelectorAll('[role="listbox"]')
