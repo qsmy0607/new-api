@@ -32,6 +32,8 @@ const defaultSiteSettings: SiteSettings = {
   About: '',
   HomePageContent: '',
   ServerAddress: '',
+  ContactEmail: '',
+  ContactWechatQRCodeURL: '',
   'legal.user_agreement': '',
   'legal.privacy_policy': '',
   HeaderNavModules: '',

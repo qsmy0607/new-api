@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useCallback, useEffect, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Dialog } from '@/components/dialog'
@@ -35,6 +35,7 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import { defaultTopNavLinks } from '../config/top-nav.config'
 import type { TopNavLink } from '../types'
+import { ContactNavItem } from './contact-nav-item'
 import { HeaderLogo } from './header-logo'
 
 const AUTH_PROMPT_SECONDS = 5
@@ -97,6 +98,37 @@ export function PublicHeader(props: PublicHeaderProps) {
   const isAuthenticated = !!user
   const displaySiteName = customSiteName || systemName
   const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
+  let renderedLogo: ReactNode
+  if (loading) {
+    renderedLogo = <Skeleton className='size-full rounded-lg' />
+  } else if (customLogo) {
+    renderedLogo = customLogo
+  } else {
+    renderedLogo = (
+      <HeaderLogo
+        src={systemLogo}
+        loading={loading}
+        logoLoaded={logoLoaded}
+        className='size-full rounded-lg object-contain'
+      />
+    )
+  }
+  let authAction: ReactNode = null
+  if (loading) {
+    authAction = <Skeleton className='h-8 w-20 rounded-lg' />
+  } else if (isAuthenticated) {
+    authAction = <ProfileDropdown />
+  } else {
+    authAction = (
+      <Button
+        size='sm'
+        className='h-8 rounded-lg px-3.5 text-xs font-medium'
+        render={<Link to='/sign-in' />}
+      >
+        {t('Sign in')}
+      </Button>
+    )
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -196,18 +228,7 @@ export function PublicHeader(props: PublicHeaderProps) {
               className='group flex shrink-0 items-center gap-2.5'
             >
               <div className='flex size-7 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105'>
-                {loading ? (
-                  <Skeleton className='size-full rounded-lg' />
-                ) : customLogo ? (
-                  customLogo
-                ) : (
-                  <HeaderLogo
-                    src={systemLogo}
-                    loading={loading}
-                    logoLoaded={logoLoaded}
-                    className='size-full rounded-lg object-contain'
-                  />
-                )}
+                {renderedLogo}
               </div>
               <span className='text-sm font-semibold tracking-tight'>
                 {loading ? <Skeleton className='h-4 w-16' /> : displaySiteName}
@@ -216,12 +237,12 @@ export function PublicHeader(props: PublicHeaderProps) {
 
             {/* Desktop nav */}
             <div className='hidden items-center gap-0.5 sm:flex'>
-              {links.map((link, i) => {
+              {links.map((link) => {
                 const isActive = pathname === link.href
                 if (link.external) {
                   return (
                     <a
-                      key={i}
+                      key={`${link.title}-${link.href}`}
                       href={link.href}
                       target='_blank'
                       rel='noopener noreferrer'
@@ -239,7 +260,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                 }
                 return (
                   <Link
-                    key={i}
+                    key={`${link.title}-${link.href}`}
                     to={link.href}
                     disabled={link.disabled}
                     onClick={(event) => handleNavLinkClick(event, link)}
@@ -255,6 +276,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                   </Link>
                 )
               })}
+              <ContactNavItem className='text-muted-foreground hover:text-foreground rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-200' />
 
               {(showLanguageSwitcher ||
                 showThemeSwitch ||
@@ -280,19 +302,7 @@ export function PublicHeader(props: PublicHeaderProps) {
               {showAuthButtons && (
                 <>
                   <div className='bg-border/40 mx-1 h-4 w-px' />
-                  {loading ? (
-                    <Skeleton className='h-8 w-20 rounded-lg' />
-                  ) : isAuthenticated ? (
-                    <ProfileDropdown />
-                  ) : (
-                    <Button
-                      size='sm'
-                      className='h-8 rounded-lg px-3.5 text-xs font-medium'
-                      render={<Link to='/sign-in' />}
-                    >
-                      {t('Sign in')}
-                    </Button>
-                  )}
+                  {authAction}
                 </>
               )}
             </div>
@@ -364,7 +374,7 @@ export function PublicHeader(props: PublicHeaderProps) {
               if (link.external) {
                 return (
                   <a
-                    key={i}
+                    key={`${link.title}-${link.href}`}
                     href={link.href}
                     target='_blank'
                     rel='noopener noreferrer'
@@ -380,7 +390,7 @@ export function PublicHeader(props: PublicHeaderProps) {
               }
               return (
                 <Link
-                  key={i}
+                  key={`${link.title}-${link.href}`}
                   to={link.href}
                   disabled={link.disabled}
                   onClick={(event) => handleNavLinkClick(event, link, true)}
@@ -391,6 +401,20 @@ export function PublicHeader(props: PublicHeaderProps) {
                 </Link>
               )
             })}
+            <ContactNavItem
+              mobile
+              className={cn(
+                'flex items-center gap-3 py-3 text-base font-medium tracking-tight transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                mobileOpen
+                  ? 'translate-y-0 opacity-100'
+                  : 'translate-y-4 opacity-0'
+              )}
+              style={{
+                transitionDelay: mobileOpen
+                  ? `${100 + links.length * 50}ms`
+                  : '0ms',
+              }}
+            />
           </nav>
 
           <div

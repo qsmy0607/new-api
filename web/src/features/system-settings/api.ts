@@ -41,6 +41,17 @@ export async function updateSystemOption(request: UpdateOptionRequest) {
   return res.data
 }
 
+export async function uploadContactQRCode(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await api.post<{
+    success: boolean
+    message: string
+    data?: { url: string }
+  }>('/api/option/contact-wechat-qrcode', formData)
+  return res.data
+}
+
 export async function confirmPaymentCompliance() {
   const res = await api.post<ConfirmPaymentComplianceResponse>(
     '/api/option/payment_compliance',
