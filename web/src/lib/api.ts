@@ -72,6 +72,15 @@ export async function getStatus() {
   return res.data?.data as Record<string, unknown>
 }
 
+export async function getNotice(): Promise<{
+  success: boolean
+  message?: string
+  data?: string
+}> {
+  const res = await api.get('/api/notice')
+  return res.data
+}
+
 // ============================================================================
 // 2FA Management APIs
 // ============================================================================

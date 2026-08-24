@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/empty'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   getAnnouncementKey,
   type NotificationAnnouncement,
@@ -57,6 +58,9 @@ interface NotificationPopoverProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   unreadCount: number
+  activeTab: 'notice' | 'announcements'
+  onTabChange: (tab: 'notice' | 'announcements') => void
+  notice: string
   announcements: NotificationAnnouncement[]
   loading: boolean
   className?: string
@@ -161,7 +165,45 @@ function EmptyState({
 }
 
 /**
- * Announcements content
+ * Notice tab content
+ */
+function NoticeContent({
+  notice,
+  loading,
+  t,
+}: {
+  notice: string
+  loading: boolean
+  t: TFunction
+}) {
+  if (loading) {
+    return (
+      <EmptyState
+        icon={<HugeiconsIcon icon={Notification02Icon} strokeWidth={2} />}
+        title={t('Loading...')}
+        description={t('Latest platform updates and notices')}
+      />
+    )
+  }
+
+  if (!notice) {
+    return (
+      <EmptyState
+        icon={<HugeiconsIcon icon={Notification02Icon} strokeWidth={2} />}
+        title={t('No announcements at this time')}
+      />
+    )
+  }
+
+  return (
+    <ScrollArea className={notificationContentAreaClassName}>
+      <RichContent breaks content={notice} />
+    </ScrollArea>
+  )
+}
+
+/**
+ * Announcements tab content
  */
 function AnnouncementsContent({
   announcements,
@@ -272,23 +314,34 @@ function AnnouncementsContent({
 }
 
 /**
- * Announcement dialog
+ * Notification dialog with Notice and Announcements tabs
  */
 export function NotificationPopover({
   open,
   onOpenChange,
   unreadCount,
+  activeTab,
+  onTabChange,
+  notice,
   announcements,
   loading,
   className,
 }: NotificationPopoverProps) {
   const { t } = useTranslation()
+  const setClosedUntilDate = useNotificationStore(
+    (state) => state.setClosedUntilDate
+  )
   const readAnnouncementKeys = useNotificationStore(
     (state) => state.readAnnouncementKeys
   )
   const markAnnouncementsRead = useNotificationStore(
     (state) => state.markAnnouncementsRead
   )
+
+  const handleCloseToday = () => {
+    setClosedUntilDate(new Date().toDateString())
+    onOpenChange(false)
+  }
 
   const handleAnnouncementRead = (key: string) => {
     markAnnouncementsRead([key])
@@ -302,7 +355,7 @@ export function NotificationPopover({
             variant='ghost'
             size='icon'
             className={cn('relative size-9', className)}
-            aria-label={t('Announcements')}
+            aria-label={t('Notifications')}
           />
         }
       >
@@ -322,28 +375,61 @@ export function NotificationPopover({
       </DialogTrigger>
 
       <DialogContent className='max-h-[calc(100dvh-1rem)] gap-0 overflow-hidden p-0 sm:max-w-3xl lg:max-w-4xl'>
-        <DialogHeader className='shrink-0 border-b px-4 py-4 pr-12 sm:px-6 sm:pr-14'>
-          <DialogTitle className='text-base font-semibold'>
-            {t('System Announcements')}
-          </DialogTitle>
-          <DialogDescription className='sr-only'>
-            {t('Latest platform updates and notices')}
-          </DialogDescription>
-        </DialogHeader>
+        <Tabs
+          value={activeTab}
+          onValueChange={onTabChange as (value: string) => void}
+          className='min-h-0 gap-0'
+        >
+          <DialogHeader className='shrink-0 gap-3 border-b px-4 py-4 pr-12 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pr-14'>
+            <DialogTitle className='text-base font-semibold'>
+              {t('System Announcements')}
+            </DialogTitle>
+            <DialogDescription className='sr-only'>
+              {t('Latest platform updates and notices')}
+            </DialogDescription>
+            <TabsList className='grid w-full grid-cols-2 sm:w-auto sm:min-w-72'>
+              <TabsTrigger value='notice'>
+                <HugeiconsIcon
+                  icon={Notification02Icon}
+                  strokeWidth={2}
+                  data-icon='inline-start'
+                />
+                {t('Notice')}
+              </TabsTrigger>
+              <TabsTrigger value='announcements'>
+                <HugeiconsIcon
+                  icon={Megaphone02Icon}
+                  strokeWidth={2}
+                  data-icon='inline-start'
+                />
+                {t('Announcements')}
+              </TabsTrigger>
+            </TabsList>
+          </DialogHeader>
 
-        <div className='min-h-0 px-4 py-3 sm:px-6 sm:py-4'>
-          <AnnouncementsContent
-            announcements={announcements}
-            readAnnouncementKeys={readAnnouncementKeys}
-            onAnnouncementRead={handleAnnouncementRead}
-            loading={loading}
-            t={t}
-          />
-        </div>
+          <div className='min-h-0 px-4 py-3 sm:px-6 sm:py-4'>
+            <TabsContent value='notice'>
+              <NoticeContent notice={notice} loading={loading} t={t} />
+            </TabsContent>
 
-        <DialogFooter className='mx-0 mb-0 shrink-0 rounded-none rounded-b-xl px-4 py-3 sm:px-6'>
-          <DialogClose render={<Button />}>{t('Close')}</DialogClose>
-        </DialogFooter>
+            <TabsContent value='announcements'>
+              <AnnouncementsContent
+                announcements={announcements}
+                readAnnouncementKeys={readAnnouncementKeys}
+                onAnnouncementRead={handleAnnouncementRead}
+                loading={loading}
+                t={t}
+              />
+            </TabsContent>
+          </div>
+
+          <DialogFooter className='mx-0 mb-0 shrink-0 rounded-none rounded-b-xl px-4 py-3 sm:px-6'>
+            <Button variant='secondary' onClick={handleCloseToday}>
+              {t('Close Today')}
+            </Button>
+            <DialogClose render={<Button />}>{t('Close')}</DialogClose>
+          </DialogFooter>
+        </Tabs>
       </DialogContent>
     </Dialog>
   )

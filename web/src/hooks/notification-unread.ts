@@ -39,42 +39,52 @@ export interface NotificationAnnouncement {
   link?: string
 }
 
-function getAnnouncementFingerprint(item: NotificationAnnouncement): string {
-  return JSON.stringify({
-    id: item.id ?? null,
-    publishDate: item.publishDate ? String(item.publishDate) : '',
-    content: (item.content || '').trim(),
-    extra: (item.extra || '').trim(),
-    type: item.type || '',
-    title: (item.title || '').trim(),
-    link: (item.link || '').trim(),
-  })
-}
-
 export function getAnnouncementKey(item: NotificationAnnouncement): string {
   if (!item) return ''
 
-  const identity =
-    item.id !== undefined && item.id !== null ? `id:${item.id}` : 'anonymous'
-  return `${identity}:${hashString(getAnnouncementFingerprint(item))}`
+  if (item.id !== undefined && item.id !== null) {
+    return `id:${item.id}`
+  }
+
+  const fingerprint = JSON.stringify({
+    publishDate: (item.publishDate as string) || '',
+    content: ((item.content as string) || '').trim(),
+    extra: ((item.extra as string) || '').trim(),
+    type: (item.type as string) || '',
+    title: ((item.title as string) || '').trim(),
+    link: ((item.link as string) || '').trim(),
+  })
+  return `hash:${hashString(fingerprint)}`
 }
 
-export function getAnnouncementsSignature(
+interface GetUnreadNotificationCountsOptions {
+  noticeContent: string
+  lastReadNotice: string
   announcements: NotificationAnnouncement[]
-): string {
-  if (announcements.length === 0) return ''
-  const fingerprint = JSON.stringify(
-    announcements.map(getAnnouncementFingerprint)
-  )
-  return `announcements:${hashString(fingerprint)}`
+  readAnnouncementKeys: string[]
 }
 
-export function getUnreadAnnouncementCount(
-  announcements: NotificationAnnouncement[],
-  readKeys: string[]
-): number {
-  const readAnnouncementKeys = new Set(readKeys)
-  return announcements.filter(
+interface NotificationUnreadCounts {
+  notice: number
+  announcements: number
+  total: number
+}
+
+export function getUnreadNotificationCounts(
+  options: GetUnreadNotificationCountsOptions
+): NotificationUnreadCounts {
+  const noticeUnread =
+    options.noticeContent && options.noticeContent !== options.lastReadNotice
+      ? 1
+      : 0
+  const readAnnouncementKeys = new Set(options.readAnnouncementKeys)
+  const announcementsUnread = options.announcements.filter(
     (item) => !readAnnouncementKeys.has(getAnnouncementKey(item))
   ).length
+
+  return {
+    notice: noticeUnread,
+    announcements: announcementsUnread,
+    total: noticeUnread + announcementsUnread,
+  }
 }

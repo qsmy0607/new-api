@@ -16,27 +16,43 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { shouldAutoOpenNotice } from '@/hooks/notification-auto-open'
 import {
-  getAnnouncementsSignature,
-  getUnreadAnnouncementCount,
+  getUnreadNotificationCounts,
   type NotificationAnnouncement,
 } from '@/hooks/notification-unread'
 import { useStatus } from '@/hooks/use-status'
+import { getNotice } from '@/lib/api'
 import { useNotificationStore } from '@/stores/notification-store'
 
+let autoOpenedNoticeContent = ''
+
 /**
- * Hook to manage system announcements and their read state
+ * Hook to manage notifications (Notice + Announcements)
+ * Provides unread counts and read status management
  */
 export function useNotifications() {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'notice' | 'announcements'>(
+    'notice'
+  )
 
+  // Fetch Notice from API
   const {
-    status,
-    loading: statusLoading,
-    isPlaceholderData,
-  } = useStatus({ refetchInterval: 5 * 60 * 1000 })
+    data: noticeResponse,
+    isLoading: noticeLoading,
+    refetch: refetchNotice,
+  } = useQuery({
+    queryKey: ['notice'],
+    queryFn: getNotice,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  })
+
+  // Fetch Announcements from status
+  const { status, loading: statusLoading } = useStatus()
   const announcementsEnabled = status?.announcements_enabled ?? false
   const announcements = useMemo<NotificationAnnouncement[]>(() => {
     if (!announcementsEnabled) return []
@@ -46,48 +62,102 @@ export function useNotifications() {
     )
   }, [announcementsEnabled, status?.announcements])
 
-  const readAnnouncementKeys = useNotificationStore(
-    (state) => state.readAnnouncementKeys
-  )
-  const lastAutoOpenedAnnouncementSignature = useNotificationStore(
-    (state) => state.lastAutoOpenedAnnouncementSignature
-  )
-  const setLastAutoOpenedAnnouncementSignature = useNotificationStore(
-    (state) => state.setLastAutoOpenedAnnouncementSignature
-  )
-  const announcementSignature = getAnnouncementsSignature(announcements)
-  const unreadCount = getUnreadAnnouncementCount(
+  // Notification store
+  const {
+    lastReadNotice,
+    readAnnouncementKeys,
+    markNoticeRead,
+    closedUntilDate,
+  } = useNotificationStore()
+
+  // Extract notice content
+  const noticeContent = noticeResponse?.success
+    ? (noticeResponse.data || '').trim()
+    : ''
+
+  // Calculate unread counts
+  const unreadCounts = getUnreadNotificationCounts({
+    noticeContent,
+    lastReadNotice,
     announcements,
-    readAnnouncementKeys
+    readAnnouncementKeys,
+  })
+
+  const markNoticeAsRead = useCallback(() => {
+    if (noticeContent) {
+      markNoticeRead(noticeContent)
+    }
+  }, [markNoticeRead, noticeContent])
+
+  const handleOpenDialog = useCallback(
+    (tab?: 'notice' | 'announcements') => {
+      const nextTab = tab || activeTab
+
+      if (nextTab === 'notice' && noticeContent) {
+        autoOpenedNoticeContent = noticeContent
+        markNoticeAsRead()
+      }
+
+      setActiveTab(nextTab)
+      setDialogOpen(true)
+    },
+    [activeTab, markNoticeAsRead, noticeContent]
   )
-  const announcementsLoading = statusLoading || isPlaceholderData
+
+  const loading = noticeLoading || statusLoading
 
   useEffect(() => {
-    if (announcementsLoading) return
-
-    if (!announcementSignature) {
-      if (lastAutoOpenedAnnouncementSignature) {
-        setLastAutoOpenedAnnouncementSignature('')
-      }
+    if (
+      !shouldAutoOpenNotice({
+        noticeContent,
+        loading,
+        closedUntilDate,
+        autoOpenedNoticeContent,
+        today: new Date().toDateString(),
+      })
+    ) {
       return
     }
 
-    if (announcementSignature === lastAutoOpenedAnnouncementSignature) return
+    handleOpenDialog('notice')
+  }, [closedUntilDate, handleOpenDialog, loading, noticeContent])
 
-    setLastAutoOpenedAnnouncementSignature(announcementSignature)
-    setDialogOpen(true)
-  }, [
-    announcementSignature,
-    announcementsLoading,
-    lastAutoOpenedAnnouncementSignature,
-    setLastAutoOpenedAnnouncementSignature,
-  ])
+  const handleDialogOpenChange = (open: boolean) => {
+    if (open) {
+      handleOpenDialog(activeTab)
+      return
+    }
+
+    setDialogOpen(false)
+  }
+
+  const handleTabChange = (tab: 'notice' | 'announcements') => {
+    setActiveTab(tab)
+    if (tab === 'notice') {
+      markNoticeAsRead()
+    }
+  }
 
   return {
+    // Data
+    notice: noticeContent,
     announcements,
-    loading: announcementsLoading,
-    unreadCount,
+    loading,
+
+    // Unread counts
+    unreadCount: unreadCounts.total,
+    unreadNoticeCount: unreadCounts.notice,
+    unreadAnnouncementsCount: unreadCounts.announcements,
+
+    // Popover state (the notification center now renders as a dialog)
     popoverOpen: dialogOpen,
-    setPopoverOpen: setDialogOpen,
+    setPopoverOpen: handleDialogOpenChange,
+    activeTab,
+    setActiveTab: handleTabChange,
+
+    // Actions
+    openPopover: handleOpenDialog,
+    closePopover: () => setDialogOpen(false),
+    refetchNotice,
   }
 }
