@@ -73,7 +73,7 @@ export function NoticeSection({ defaultValue }: NoticeSectionProps) {
   }
 
   return (
-    <SettingsSection title={t('System Notice')}>
+    <SettingsSection title={t('Notice')}>
       <Form {...form}>
         <SettingsForm onSubmit={form.handleSubmit(onSubmit)}>
           <SettingsPageFormActions
@@ -86,7 +86,7 @@ export function NoticeSection({ defaultValue }: NoticeSectionProps) {
             name='Notice'
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('Announcement content')}</FormLabel>
+                <FormLabel>{t('Notice content')}</FormLabel>
                 <FormControl>
                   <Textarea
                     rows={8}
