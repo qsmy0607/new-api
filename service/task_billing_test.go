@@ -255,18 +255,22 @@ func TestLogTaskConsumptionPersistsSubscriptionFunding(t *testing.T) {
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/videos", nil)
 	ctx.Set("username", "test_user")
 	info := &relaycommon.RelayInfo{
-		UserId:                  1,
-		ChannelId:               1,
-		OriginModelName:          "test-model",
-		Action:                   "generate",
-		BillingSource:            BillingSourceSubscription,
-		SubscriptionId:           42,
-		SubscriptionPreConsumed:  100,
-		SubscriptionPostDelta:    20,
-		SubscriptionAmountTotal:  1000,
-		SubscriptionPlanId:       7,
-		SubscriptionPlanTitle:    "Video plan",
-		PriceData:                types.PriceData{Quota: 120},
+		UserId:                 1,
+		OriginModelName:         "test-model",
+		BillingSource:           BillingSourceSubscription,
+		SubscriptionId:          42,
+		SubscriptionPreConsumed: 100,
+		SubscriptionPostDelta:   20,
+		SubscriptionAmountTotal: 1000,
+		SubscriptionPlanId:      7,
+		SubscriptionPlanTitle:   "Video plan",
+		PriceData:               types.PriceData{Quota: 120},
+		ChannelMeta: &relaycommon.ChannelMeta{
+			ChannelId: 1,
+		},
+		TaskRelayInfo: &relaycommon.TaskRelayInfo{
+			Action: "generate",
+		},
 	}
 
 	LogTaskConsumption(ctx, info)
