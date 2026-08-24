@@ -86,7 +86,7 @@ export function NoticeSection({ defaultValue }: NoticeSectionProps) {
             name='Notice'
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('Announcement content')}</FormLabel>
+                <FormLabel>{t('Notice content')}</FormLabel>
                 <FormControl>
                   <Textarea
                     rows={8}
