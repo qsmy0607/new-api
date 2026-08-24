@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/types"
+	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -234,6 +236,47 @@ func TestTaskBillingOtherFiltersHistoricalOtherRatios(t *testing.T) {
 	assert.NotContains(t, other, "negative")
 	assert.NotContains(t, other, "nan")
 	assert.NotContains(t, other, "inf")
+}
+
+func TestTaskBillingOtherMarksSubscriptionFunding(t *testing.T) {
+	task := makeTask(1, 1, 100, 0, BillingSourceSubscription, 42)
+
+	other := taskBillingOther(task)
+
+	assert.Equal(t, BillingSourceSubscription, other["billing_source"])
+	assert.Equal(t, 42, other["subscription_id"])
+}
+
+func TestLogTaskConsumptionPersistsSubscriptionFunding(t *testing.T) {
+	truncate(t)
+	seedUser(t, 1, 1000)
+	seedChannel(t, 1)
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/videos", nil)
+	ctx.Set("username", "test_user")
+	info := &relaycommon.RelayInfo{
+		UserId:                  1,
+		ChannelId:               1,
+		OriginModelName:          "test-model",
+		Action:                   "generate",
+		BillingSource:            BillingSourceSubscription,
+		SubscriptionId:           42,
+		SubscriptionPreConsumed:  100,
+		SubscriptionPostDelta:    20,
+		SubscriptionAmountTotal:  1000,
+		SubscriptionPlanId:       7,
+		SubscriptionPlanTitle:    "Video plan",
+		PriceData:                types.PriceData{Quota: 120},
+	}
+
+	LogTaskConsumption(ctx, info)
+
+	log := getLastLog(t)
+	require.NotNil(t, log)
+	other, err := common.StrToMap(log.Other)
+	require.NoError(t, err)
+	assert.Equal(t, BillingSourceSubscription, other["billing_source"])
+	assert.EqualValues(t, 42, other["subscription_id"])
 }
 
 func TestTaskBillingContextPriceDataFiltersMultiplier(t *testing.T) {

@@ -92,6 +92,24 @@ const (
 	LogTypeLogin   = 7
 )
 
+// LogTypeSubscription is a filter-only type. Subscription charges remain
+// consumption logs so existing usage accounting keeps the same semantics.
+const LogTypeSubscription = 8
+
+const subscriptionBillingSourcePattern = `%"billing_source":"subscription"%`
+
+func applyLogTypeFilter(tx *gorm.DB, prefix string, logType int) *gorm.DB {
+	if logType == LogTypeUnknown {
+		return tx
+	}
+	if logType == LogTypeSubscription {
+		return tx.
+			Where(prefix+"type = ?", LogTypeConsume).
+			Where(prefix+"other LIKE ?", subscriptionBillingSourcePattern)
+	}
+	return tx.Where(prefix+"type = ?", logType)
+}
+
 func ensureLogRequestId(log *Log) {
 	if log != nil && log.RequestId == "" {
 		log.RequestId = common.NewRequestId()
@@ -466,12 +484,7 @@ func RecordTaskBillingLog(params RecordTaskBillingLogParams) {
 }
 
 func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string) (logs []*Log, total int64, err error) {
-	var tx *gorm.DB
-	if logType == LogTypeUnknown {
-		tx = LOG_DB
-	} else {
-		tx = LOG_DB.Where("logs.type = ?", logType)
-	}
+	tx := applyLogTypeFilter(LOG_DB, "logs.", logType)
 
 	if tx, err = applyExplicitLogTextFilter(tx, "logs.model_name", modelName); err != nil {
 		return nil, 0, err
@@ -562,12 +575,7 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 const logSearchCountLimit = 10000
 
 func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int64, modelName string, tokenName string, startIdx int, num int, group string, requestId string, upstreamRequestId string) (logs []*Log, total int64, err error) {
-	var tx *gorm.DB
-	if logType == LogTypeUnknown {
-		tx = LOG_DB.Where("logs.user_id = ?", userId)
-	} else {
-		tx = LOG_DB.Where("logs.user_id = ? and logs.type = ?", userId, logType)
-	}
+	tx := applyLogTypeFilter(LOG_DB.Where("logs.user_id = ?", userId), "logs.", logType)
 
 	if tx, err = applyExplicitLogTextFilter(tx, "logs.model_name", modelName); err != nil {
 		return nil, 0, err
@@ -652,8 +660,12 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 		rpmTpmQuery = rpmTpmQuery.Where(logGroupCol+" = ?", group)
 	}
 
-	tx = tx.Where("type = ?", LogTypeConsume)
-	rpmTpmQuery = rpmTpmQuery.Where("type = ?", LogTypeConsume)
+	statsLogType := LogTypeConsume
+	if logType == LogTypeSubscription {
+		statsLogType = LogTypeSubscription
+	}
+	tx = applyLogTypeFilter(tx, "", statsLogType)
+	rpmTpmQuery = applyLogTypeFilter(rpmTpmQuery, "", statsLogType)
 
 	// 只统计最近60秒的rpm和tpm
 	rpmTpmQuery = rpmTpmQuery.Where("created_at >= ?", time.Now().Add(-60*time.Second).Unix())
