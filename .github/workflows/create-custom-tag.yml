@@ -49,6 +49,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          OFFICIAL_TAG=$(printf '%s' "$OFFICIAL_TAG" | tr -d '[:space:]')
+
           if [[ ! "$OFFICIAL_TAG" =~ ^v[0-9A-Za-z._-]+$ ]] || [[ "$OFFICIAL_TAG" == *-custom.* ]]; then
             echo "Invalid official tag: $OFFICIAL_TAG" >&2
             exit 1

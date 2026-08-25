@@ -382,7 +382,7 @@ export function NotificationPopover({
         >
           <DialogHeader className='shrink-0 gap-3 border-b px-4 py-4 pr-12 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pr-14'>
             <DialogTitle className='text-base font-semibold'>
-              {t('System Announcements')}
+              {activeTab === 'notice' ? t('Notice') : t('Announcements')}
             </DialogTitle>
             <DialogDescription className='sr-only'>
               {t('Latest platform updates and notices')}

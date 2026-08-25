@@ -296,9 +296,18 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 	case <-stopChan:
 		// EndReason already set by the goroutine that triggered stopChan
 	case <-c.Request.Context().Done():
-		// 客户端断开：立即 cleanup 关闭上游 resp.Body，解除 scanner 阻塞并让上游停止生成，
-		// 避免为已放弃的请求继续消费上游 token。
+		// 客户端断开：继续读取上游响应直到获取计费 usage（如 response.completed），
+		// 再执行 cleanup。写入客户端的操作已被 requestContextDone() 静默跳过，
+		// 不会产生额外的上游消耗，只是等待已经在传输中的剩余数据读完。
 		info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonClientGone, c.Request.Context().Err())
+		graceTimer := time.NewTimer(30 * time.Second)
+		defer graceTimer.Stop()
+		select {
+		case <-stopChan:
+			// scanner 自然结束，usage 已捕获
+		case <-graceTimer.C:
+			logger.LogInfo(c, "client gone drain grace period expired")
+		}
 	}
 
 	cleanup()
