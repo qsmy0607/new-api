@@ -300,7 +300,8 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 		// 再执行 cleanup。写入客户端的操作已被 requestContextDone() 静默跳过，
 		// 不会产生额外的上游消耗，只是等待已经在传输中的剩余数据读完。
 		info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonClientGone, c.Request.Context().Err())
-		graceTimer := time.NewTimer(60 * time.Second)
+		gracePeriod := time.Duration(constant.ClientGoneDrainGracePeriod) * time.Second
+		graceTimer := time.NewTimer(gracePeriod)
 		defer graceTimer.Stop()
 		select {
 		case <-stopChan:
