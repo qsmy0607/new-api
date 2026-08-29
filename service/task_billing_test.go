@@ -464,7 +464,7 @@ func TestLogTaskConsumptionPersistsSubscriptionFunding(t *testing.T) {
 		},
 	}
 
-	LogTaskConsumption(ctx, info)
+	LogTaskConsumption(ctx, info, nil)
 
 	log := getLastLog(t)
 	require.NotNil(t, log)
