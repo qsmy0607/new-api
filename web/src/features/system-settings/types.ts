@@ -116,6 +116,7 @@ export type SiteSettings = {
   ServerAddress: string
   ContactEmail: string
   ContactWechatQRCodeURL: string
+  TaskPublicAddress: string
   'legal.user_agreement': string
   'legal.privacy_policy': string
   HeaderNavModules: string

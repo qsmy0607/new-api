@@ -46,6 +46,8 @@ import {
   type ResolvedLogTimeRange,
 } from '../types'
 
+export { buildQueryParams } from './query-params'
+
 // ============================================================================
 // Type Checkers & Utilities
 // ============================================================================

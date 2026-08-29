@@ -44,6 +44,7 @@ const SITE_SECTIONS = [
           ServerAddress: settings.ServerAddress,
           ContactEmail: settings.ContactEmail,
           ContactWechatQRCodeURL: settings.ContactWechatQRCodeURL,
+          TaskPublicAddress: settings.TaskPublicAddress,
           legal: {
             user_agreement: settings['legal.user_agreement'],
             privacy_policy: settings['legal.privacy_policy'],

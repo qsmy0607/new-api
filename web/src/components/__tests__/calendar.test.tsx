@@ -44,7 +44,7 @@ test.each([
     />
   )
   const today = container.querySelector<HTMLButtonElement>(
-    'button[data-day="8/21/2026"]'
+    'button[data-today="true"]'
   )
 
   assert.ok(today)

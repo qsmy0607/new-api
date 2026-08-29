@@ -12,8 +12,8 @@ ENV GOEXPERIMENT=greenteagc
 WORKDIR /build
 
 ADD go.mod go.sum ./
-# relaykit is referenced through a local replace directive, so its module
-# metadata must exist before the root dependency graph can be downloaded.
+# relaykit is a local submodule referenced via replace; its go.mod must be
+# present for go mod download to resolve the main module graph.
 ADD relaykit/go.mod ./relaykit/go.mod
 RUN go mod download
 
