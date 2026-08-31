@@ -181,32 +181,3 @@ func (t *RequestTiming) GetBreakdown() *TimingBreakdown {
 
 	return breakdown
 }
-
-// IsEnabled 检查是否启用了计时功能（根据采样率）
-func IsTimingEnabled(c *gin.Context) bool {
-	// 从配置读取是否启用
-	// 这里先简单返回true，后续可以加采样逻辑
-	return GetOptimizationConfig().TimingEnabled
-}
-
-// ShouldSample 是否应该采样这个请求
-func ShouldSample() bool {
-	config := GetOptimizationConfig()
-	if !config.TimingEnabled {
-		return false
-	}
-
-	// 如果采样率为1.0，所有请求都采样
-	if config.TimingSampleRate >= 1.0 {
-		return true
-	}
-
-	// 如果采样率为0，不采样
-	if config.TimingSampleRate <= 0 {
-		return false
-	}
-
-	// 根据采样率随机采样
-	// 这里简化实现，实际可以用更高效的算法
-	return true // 暂时所有请求都采样，后续优化
-}
