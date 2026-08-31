@@ -80,12 +80,24 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 
 	defer service.CloseResponseBodyGracefully(resp)
 
+	// 🔥 标记收到上游首字节
+	common.MarkTiming(c, "first_upstream_byte")
+
 	var usage = &dto.Usage{}
 	var responseTextBuilder strings.Builder
 	imageCounter := &relaycommon.ImageGenerationCallCounter{}
 	imageCommitted := false
+	isFirstEvent := true
 
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
+		// 🔥 标记上游首个事件
+		if isFirstEvent {
+			common.MarkTiming(c, "first_upstream_event")
+			isFirstEvent = false
+		}
+
+		// 🔥 标记首次发送到客户端
+		common.MarkTiming(c, "first_client_flush")
 
 		// 检查当前数据是否包含 completed 状态和 usage 信息
 		var streamResponse dto.ResponsesStreamResponse
