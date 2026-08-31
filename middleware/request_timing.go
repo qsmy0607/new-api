@@ -27,23 +27,24 @@ func RequestTimingMiddleware() gin.HandlerFunc {
 
 		breakdown := timing.GetBreakdown()
 		if breakdown != nil {
-			// 输出到日志（结构化）
-			logger.LogInfo(c, "request_timing_breakdown",
-				"routing_ms", breakdown.RoutingMs,
-				"auth_ms", breakdown.AuthMs,
-				"channel_select_ms", breakdown.ChannelSelectMs,
-				"token_calc_ms", breakdown.TokenCalcMs,
-				"pre_charge_ms", breakdown.PreChargeMs,
-				"conn_establish_ms", breakdown.ConnEstablishMs,
-				"upstream_ttfb_ms", breakdown.UpstreamTTFBMs,
-				"upstream_first_event_ms", breakdown.UpstreamFirstEvent,
-				"client_ttft_ms", breakdown.ClientTTFTMs, // ⭐ TTFT
-				"generation_time_ms", breakdown.GenerationTimeMs,
-				"settlement_ms", breakdown.SettlementMs,
-				"total_ms", breakdown.TotalMs,
-				"gateway_overhead_ms", breakdown.GatewayOverheadMs,
-				"upstream_delay_ms", breakdown.UpstreamDelayMs,
+			// 输出到日志（JSON格式）
+			logMsg := common.Sprintf("request_timing_breakdown: routing=%dms auth=%dms channel_select=%dms token_calc=%dms pre_charge=%dms conn_establish=%dms upstream_ttfb=%dms upstream_first_event=%dms client_ttft=%dms generation=%dms settlement=%dms total=%dms gateway_overhead=%dms upstream_delay=%dms",
+				breakdown.RoutingMs,
+				breakdown.AuthMs,
+				breakdown.ChannelSelectMs,
+				breakdown.TokenCalcMs,
+				breakdown.PreChargeMs,
+				breakdown.ConnEstablishMs,
+				breakdown.UpstreamTTFBMs,
+				breakdown.UpstreamFirstEvent,
+				breakdown.ClientTTFTMs, // ⭐ TTFT
+				breakdown.GenerationTimeMs,
+				breakdown.SettlementMs,
+				breakdown.TotalMs,
+				breakdown.GatewayOverheadMs,
+				breakdown.UpstreamDelayMs,
 			)
+			logger.LogInfo(c, logMsg)
 
 			// TODO: 发送到监控系统（Prometheus）
 			// metrics.RecordRequestTiming(breakdown)
