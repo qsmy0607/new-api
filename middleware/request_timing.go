@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"fmt"
+
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/gin-gonic/gin"
@@ -27,8 +29,8 @@ func RequestTimingMiddleware() gin.HandlerFunc {
 
 		breakdown := timing.GetBreakdown()
 		if breakdown != nil {
-			// 输出到日志（JSON格式）
-			logMsg := common.Sprintf("request_timing_breakdown: routing=%dms auth=%dms channel_select=%dms token_calc=%dms pre_charge=%dms conn_establish=%dms upstream_ttfb=%dms upstream_first_event=%dms client_ttft=%dms generation=%dms settlement=%dms total=%dms gateway_overhead=%dms upstream_delay=%dms",
+			// 输出到日志（格式化字符串）
+			logMsg := fmt.Sprintf("request_timing_breakdown: routing=%dms auth=%dms channel_select=%dms token_calc=%dms pre_charge=%dms conn_establish=%dms upstream_ttfb=%dms upstream_first_event=%dms client_ttft=%dms generation=%dms settlement=%dms total=%dms gateway_overhead=%dms upstream_delay=%dms",
 				breakdown.RoutingMs,
 				breakdown.AuthMs,
 				breakdown.ChannelSelectMs,
