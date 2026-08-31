@@ -481,6 +481,10 @@ func TokenAuth() func(c *gin.Context) {
 		if err != nil {
 			return
 		}
+
+		// 🔥 标记认证完成
+		common.MarkTiming(c, "auth")
+
 		c.Next()
 	}
 }

@@ -25,6 +25,9 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 		return nil
 	}
 
+	// 🔥 标记首次发送到客户端
+	common.MarkTiming(c, "first_client_flush")
+
 	if !forceFormat && !thinkToContent {
 		return helper.StringData(c, data)
 	}
@@ -109,6 +112,9 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 
 	defer service.CloseResponseBodyGracefully(resp)
 
+	// 🔥 标记收到上游首字节
+	common.MarkTiming(c, "first_upstream_byte")
+
 	model := info.UpstreamModelName
 	var responseId string
 	var createAt int64 = 0
@@ -133,6 +139,11 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 			}
 		}
 		if len(data) > 0 {
+			// 🔥 标记上游首个事件
+			if lastStreamData == "" {
+				common.MarkTiming(c, "first_upstream_event")
+			}
+
 			// 对音频模型，保存倒数第二个stream data
 			if isAudioModel && lastStreamData != "" {
 				secondLastStreamData = lastStreamData
