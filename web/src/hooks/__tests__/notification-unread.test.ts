@@ -20,38 +20,38 @@ import assert from 'node:assert/strict'
 
 import { describe, test } from 'vitest'
 
-import { getUnreadNotificationCounts } from '../notification-unread'
+import {
+  getAnnouncementKey,
+  getAnnouncementsSignature,
+  getUnreadAnnouncementCount,
+} from '../notification-unread'
 
-const announcements = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }]
+const announcements = [
+  { id: 1, content: 'First announcement' },
+  { id: 2, content: 'Second announcement' },
+  { id: 3, content: 'Third announcement' },
+  { id: 4, content: 'Fourth announcement' },
+]
 
-describe('notification unread counts', () => {
+describe('announcement unread count', () => {
   test('decrements the count only for announcements that were individually read', () => {
-    const unreadCounts = getUnreadNotificationCounts({
-      noticeContent: '',
-      lastReadNotice: '',
-      announcements,
-      readAnnouncementKeys: ['id:1'],
-    })
-
-    assert.deepEqual(unreadCounts, {
-      notice: 0,
-      announcements: 3,
-      total: 3,
-    })
+    const readKey = getAnnouncementKey(announcements[0])
+    assert.equal(getUnreadAnnouncementCount(announcements, [readKey]), 3)
   })
 
-  test('keeps an unread notice in the total after announcements are read', () => {
-    const unreadCounts = getUnreadNotificationCounts({
-      noticeContent: 'Scheduled maintenance',
-      lastReadNotice: '',
-      announcements,
-      readAnnouncementKeys: ['id:1', 'id:2', 'id:3', 'id:4'],
-    })
+  test('treats edited announcement content as a new version', () => {
+    const editedAnnouncements = [
+      { ...announcements[0], content: 'Updated first announcement' },
+      ...announcements.slice(1),
+    ]
 
-    assert.deepEqual(unreadCounts, {
-      notice: 1,
-      announcements: 0,
-      total: 1,
-    })
+    assert.notEqual(
+      getAnnouncementKey(announcements[0]),
+      getAnnouncementKey(editedAnnouncements[0])
+    )
+    assert.notEqual(
+      getAnnouncementsSignature(announcements),
+      getAnnouncementsSignature(editedAnnouncements)
+    )
   })
 })
