@@ -41,3 +41,12 @@ service/relayconvert/chat_responses_live_local_test.go
 service/openaicompat/chat_responses_live_local_test.go
 go.work
 go.work.sum
+
+# Local performance optimization notes and helper scripts.
+docs/optimization/
+scripts/benchmark_ttft.py
+scripts/check_config_status.sh
+scripts/deploy_optimized.sh
+scripts/quick_optimize.sh
+scripts/show_next_steps.sh
+scripts/test_timing.sh
