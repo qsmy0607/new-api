@@ -16,7 +16,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Megaphone02Icon, Notification02Icon } from '@hugeicons/core-free-icons'
+import {
+  Cancel01Icon,
+  Megaphone02Icon,
+  Notification02Icon,
+} from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
@@ -27,7 +31,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -320,7 +323,25 @@ export function NotificationPopover({
         ) : null}
       </DialogTrigger>
 
-      <DialogContent className='max-h-[calc(100dvh-1rem)] gap-0 overflow-hidden p-0 sm:max-w-3xl lg:max-w-4xl'>
+      <DialogContent
+        showCloseButton={false}
+        className='flex max-h-[calc(100dvh-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl lg:max-w-4xl'
+      >
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon-lg'
+          className='absolute top-2 right-2 z-20'
+          aria-label={t('Close')}
+          onClick={() => onOpenChange(false)}
+        >
+          <HugeiconsIcon
+            icon={Cancel01Icon}
+            strokeWidth={2}
+            aria-hidden='true'
+          />
+        </Button>
+
         <DialogHeader className='shrink-0 border-b px-4 py-4 pr-12 sm:px-6 sm:pr-14'>
           <DialogTitle className='text-base font-semibold'>
             {t('System Announcements')}
@@ -330,7 +351,7 @@ export function NotificationPopover({
           </DialogDescription>
         </DialogHeader>
 
-        <div className='min-h-0 px-4 py-3 sm:px-6 sm:py-4'>
+        <div className='min-h-0 flex-1 overflow-hidden px-4 py-3 sm:px-6 sm:py-4'>
           <AnnouncementsContent
             announcements={announcements}
             readAnnouncementKeys={readAnnouncementKeys}
@@ -340,8 +361,10 @@ export function NotificationPopover({
           />
         </div>
 
-        <DialogFooter className='mx-0 mb-0 shrink-0 rounded-none rounded-b-xl px-4 py-3 sm:px-6'>
-          <DialogClose render={<Button />}>{t('Close')}</DialogClose>
+        <DialogFooter className='bg-popover relative z-10 mx-0 mb-0 shrink-0 rounded-none rounded-b-xl px-4 py-3 sm:px-6'>
+          <Button type='button' onClick={() => onOpenChange(false)}>
+            {t('Close')}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
