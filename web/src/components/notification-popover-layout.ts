@@ -17,4 +17,4 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 export const notificationContentAreaClassName =
-  'max-h-[min(54dvh,36rem)] pr-3 sm:max-h-[min(58dvh,36rem)]'
+  'max-h-[min(54dvh,36rem)] overflow-y-auto pr-3 sm:max-h-[min(58dvh,36rem)]'
