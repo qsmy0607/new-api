@@ -40,10 +40,7 @@ export function useNotifications() {
   const announcementsEnabled = status?.announcements_enabled ?? false
   const announcements = useMemo<NotificationAnnouncement[]>(() => {
     if (!announcementsEnabled) return []
-    return ((status?.announcements || []) as NotificationAnnouncement[]).slice(
-      0,
-      20
-    )
+    return (status?.announcements || []) as NotificationAnnouncement[]
   }, [announcementsEnabled, status?.announcements])
 
   const readAnnouncementKeys = useNotificationStore(
