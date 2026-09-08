@@ -23,6 +23,7 @@ import { BotProtectionSection } from './bot-protection-section'
 import { CustomOAuthSection } from './custom-oauth/custom-oauth-section'
 import { OAuthSection } from './oauth-section'
 import { PasskeySection } from './passkey-section'
+import { RegistrationIPSection } from './registration-ip-section'
 
 const AUTH_SECTIONS = [
   {
@@ -38,6 +39,19 @@ const AUTH_SECTIONS = [
           EmailDomainRestrictionEnabled: settings.EmailDomainRestrictionEnabled,
           EmailAliasRestrictionEnabled: settings.EmailAliasRestrictionEnabled,
           EmailDomainWhitelist: settings.EmailDomainWhitelist,
+        }}
+      />
+    ),
+  },
+  {
+    id: 'registration-ip',
+    titleKey: 'Registration IP Blacklist',
+    build: (settings: AuthSettings) => (
+      <RegistrationIPSection
+        defaultValues={{
+          RegistrationIPBlacklistEnabled:
+            settings.RegistrationIPBlacklistEnabled,
+          RegistrationIPBlacklist: settings.RegistrationIPBlacklist,
         }}
       />
     ),

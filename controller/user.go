@@ -244,6 +244,10 @@ func Register(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgUserPasswordRegisterDisabled)
 		return
 	}
+	if registrationIPBlocked(c) {
+		writeRegistrationIPBlocked(c)
+		return
+	}
 	var user model.User
 	err := common.DecodeJson(c.Request.Body, &user)
 	if err != nil {

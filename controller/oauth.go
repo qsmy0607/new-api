@@ -195,6 +195,10 @@ func HandleOAuth(c *gin.Context) {
 	}
 	user, err := findOrCreateOAuthUser(c, provider, oauthUser, payload.AffiliateCode)
 	if err != nil {
+		if errors.Is(err, errRegistrationIPBlocked) {
+			writeRegistrationIPBlocked(c)
+			return
+		}
 		if errors.Is(err, model.ErrEmailAlreadyTaken) {
 			common.ApiErrorI18n(c, i18n.MsgUserEmailAlreadyTaken)
 			return
@@ -328,6 +332,9 @@ func findOrCreateOAuthUser(c *gin.Context, provider oauth.Provider, oauthUser *o
 	// User doesn't exist, create new user if registration is enabled
 	if !common.RegisterEnabled {
 		return nil, &OAuthRegistrationDisabledError{}
+	}
+	if registrationIPBlocked(c) {
+		return nil, errRegistrationIPBlocked
 	}
 
 	// Set up new user

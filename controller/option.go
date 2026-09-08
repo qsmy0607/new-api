@@ -221,6 +221,22 @@ func UpdateOption(c *gin.Context) {
 
 			return
 		}
+	case setting.RegistrationIPBlacklistKey:
+		if err = setting.ValidateRegistrationIPBlacklist(option.Value.(string)); err != nil {
+			entryError, ok := err.(*setting.RegistrationIPBlacklistEntryError)
+			if ok {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"success": false,
+					"message": i18n.T(c, i18n.MsgInvalidIPOrCIDR, map[string]any{"Line": entryError.Line}),
+				})
+				return
+			}
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": i18n.T(c, i18n.MsgInvalidParams),
+			})
+			return
+		}
 	case "TelegramOAuthEnabled":
 		if option.Value == "true" && common.TelegramBotToken == "" {
 			c.JSON(http.StatusOK, gin.H{

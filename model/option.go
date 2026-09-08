@@ -66,6 +66,10 @@ func InitOptionMap() {
 	common.OptionMap["EmailDomainRestrictionEnabled"] = strconv.FormatBool(common.EmailDomainRestrictionEnabled)
 	common.OptionMap["EmailAliasRestrictionEnabled"] = strconv.FormatBool(common.EmailAliasRestrictionEnabled)
 	common.OptionMap["EmailDomainWhitelist"] = strings.Join(common.EmailDomainWhitelist, ",")
+	common.OptionMap[setting.RegistrationIPBlacklistEnabledKey] = "false"
+	common.OptionMap[setting.RegistrationIPBlacklistKey] = ""
+	setting.SetRegistrationIPBlacklistEnabled(false)
+	_ = setting.UpdateRegistrationIPBlacklist("")
 	common.OptionMap["SMTPServer"] = ""
 	common.OptionMap["SMTPFrom"] = ""
 	common.OptionMap["SMTPPort"] = strconv.Itoa(common.SMTPPort)
@@ -340,6 +344,8 @@ func updateOptionMap(key string, value string) (err error) {
 			common.TurnstileCheckEnabled = boolValue
 		case "RegisterEnabled":
 			common.RegisterEnabled = boolValue
+		case setting.RegistrationIPBlacklistEnabledKey:
+			setting.SetRegistrationIPBlacklistEnabled(boolValue)
 		case "EmailDomainRestrictionEnabled":
 			common.EmailDomainRestrictionEnabled = boolValue
 		case "EmailAliasRestrictionEnabled":
@@ -420,6 +426,8 @@ func updateOptionMap(key string, value string) (err error) {
 	switch key {
 	case "EmailDomainWhitelist":
 		common.EmailDomainWhitelist = strings.Split(value, ",")
+	case setting.RegistrationIPBlacklistKey:
+		err = setting.UpdateRegistrationIPBlacklist(value)
 	case "SMTPServer":
 		common.SMTPServer = value
 	case "SMTPPort":

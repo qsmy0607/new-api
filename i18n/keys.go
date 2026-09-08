@@ -26,6 +26,7 @@ const (
 	MsgAlreadyExists     = "common.already_exists"
 	MsgNameCannotBeEmpty = "common.name_cannot_be_empty"
 	MsgBatchTooMany      = "common.batch_too_many"
+	MsgInvalidIPOrCIDR   = "common.invalid_ip_or_cidr"
 )
 
 // Auth middleware messages
@@ -79,6 +80,7 @@ const (
 	MsgUserPasswordLoginDisabled     = "user.password_login_disabled"
 	MsgUserRegisterDisabled          = "user.register_disabled"
 	MsgUserPasswordRegisterDisabled  = "user.password_register_disabled"
+	MsgUserRegistrationIPBlocked     = "user.registration_ip_blocked"
 	MsgUserUsernameOrPasswordEmpty   = "user.username_or_password_empty"
 	MsgUserUsernameOrPasswordError   = "user.username_or_password_error"
 	MsgUserEmailOrPasswordEmpty      = "user.email_or_password_empty"

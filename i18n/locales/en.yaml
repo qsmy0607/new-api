@@ -2,6 +2,7 @@
 
 # Common messages
 common.invalid_params: "Invalid parameters"
+common.invalid_ip_or_cidr: "Invalid IP address or CIDR on line {{.Line}}"
 common.database_error: "Database error, please contact the administrator"
 common.retry_later: "Please try again later"
 common.generate_failed: "Generation failed"
@@ -67,6 +68,7 @@ redemption.expire_time_invalid: "Expiration time cannot be earlier than current 
 user.password_login_disabled: "Password login has been disabled by administrator"
 user.register_disabled: "New user registration has been disabled by administrator"
 user.password_register_disabled: "Password registration has been disabled by administrator, please use third-party account verification"
+user.registration_ip_blocked: "Registration is not available from the current network. Please contact the administrator if you need assistance."
 user.username_or_password_empty: "Username or password is empty"
 user.username_or_password_error: "Username or password is incorrect"
 user.email_or_password_empty: "Email or password is empty!"
