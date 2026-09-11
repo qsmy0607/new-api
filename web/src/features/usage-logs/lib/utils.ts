@@ -179,6 +179,10 @@ export function resolveLogTimeRange(
       start: now.startOf('month').toDate(),
       end: now.endOf('month').toDate(),
     },
+    previousMonth: {
+      start: previousMonth.startOf('month').toDate(),
+      end: previousMonth.endOf('month').toDate(),
+    },
     previousMonthToDate: {
       start: previousMonth.startOf('month').toDate(),
       end: previousMonth.toDate(),

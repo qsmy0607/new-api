@@ -39,6 +39,7 @@ export const LOG_TIME_PRESET_VALUES = [
   'thisWeek',
   'last30Days',
   'thisMonth',
+  'previousMonth',
   'previousMonthToDate',
 ] as const
 

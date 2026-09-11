@@ -96,6 +96,34 @@ describe('usage log time ranges', () => {
     )
   })
 
+  test.each([
+    [
+      new Date(2026, 8, 12),
+      new Date(2026, 7, 1),
+      new Date(2026, 7, 31, 23, 59, 59, 999),
+    ],
+    [
+      new Date(2026, 0, 12),
+      new Date(2025, 11, 1),
+      new Date(2025, 11, 31, 23, 59, 59, 999),
+    ],
+    [
+      new Date(2024, 2, 31),
+      new Date(2024, 1, 1),
+      new Date(2024, 1, 29, 23, 59, 59, 999),
+    ],
+  ])(
+    'resolves the full previous month relative to %s',
+    (reference, start, end) => {
+      const resolved = resolveLogTimeRange(
+        { kind: 'preset', preset: 'previousMonth' },
+        reference
+      )
+
+      assert.deepEqual(resolved, { start, end })
+    }
+  )
+
   test('resolves previous month to date and clamps missing month-end dates', () => {
     const september = resolveLogTimeRange(
       { kind: 'preset', preset: 'previousMonthToDate' },

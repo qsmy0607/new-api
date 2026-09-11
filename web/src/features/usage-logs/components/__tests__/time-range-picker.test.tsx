@@ -44,7 +44,7 @@ const enTranslation = {
   'Previous year': 'Previous year',
   'Next month': 'Next month',
   'Next year': 'Next year',
-  Today: 'Today',
+  'Last month': 'Last month',
   'Previous day to date': 'Previous day to date',
   Yesterday: 'Yesterday',
   'This month': 'This month',
@@ -73,7 +73,7 @@ const reactTestGlobals = globalThis as typeof globalThis & {
 reactTestGlobals.IS_REACT_ACT_ENVIRONMENT = true
 
 const quickRanges = [
-  ['Today', 'today', 'preset'],
+  ['Last month', 'previousMonth', 'preset'],
   ['Previous day to date', 'previousDayToDate', 'custom'],
   ['Yesterday', 'yesterday', 'preset'],
   ['This month', 'thisMonth', 'preset'],
@@ -270,11 +270,11 @@ test('calendar quick ranges use two narrow columns and three wide columns', asyn
   assert.ok(dateTrigger)
   await act(async () => dateTrigger.click())
 
-  const todayButton = [
+  const lastMonthButton = [
     ...document.querySelectorAll<HTMLButtonElement>('button'),
-  ].find((button) => button.textContent === 'Today')
-  assert.ok(todayButton)
-  const quickRangeGrid = todayButton.parentElement
+  ].find((button) => button.textContent === 'Last month')
+  assert.ok(lastMonthButton)
+  const quickRangeGrid = lastMonthButton.parentElement
   assert.ok(quickRangeGrid)
   assert.equal(quickRangeGrid.classList.contains('grid-cols-2'), true)
   assert.equal(quickRangeGrid.classList.contains('sm:grid-cols-3'), true)

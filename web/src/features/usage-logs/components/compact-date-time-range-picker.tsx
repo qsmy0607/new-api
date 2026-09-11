@@ -353,9 +353,9 @@ export function CompactDateTimeRangePicker({
                 variant='secondary'
                 size='sm'
                 className='text-xs'
-                onClick={() => handleQuickRangeSelect('today')}
+                onClick={() => handleQuickRangeSelect('previousMonth')}
               >
-                {t('Today')}
+                {t('Last month')}
               </Button>
               <Button
                 type='button'
