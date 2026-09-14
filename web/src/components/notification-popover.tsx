@@ -51,7 +51,6 @@ import {
   getAnnouncementKey,
   type NotificationAnnouncement,
 } from '@/hooks/notification-unread'
-import { getAnnouncementColorClass } from '@/lib/colors'
 import { formatDateTimeObject } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useNotificationStore } from '@/stores/notification-store'
@@ -126,12 +125,12 @@ function getRelativeTime(publishDate: string | Date, t: TFunction): string {
 /**
  * Announcement status dot indicator
  */
-function AnnouncementDot({ type }: { type?: string }) {
+function AnnouncementDot({ unread }: { unread: boolean }) {
   return (
     <span
       className={cn(
         'mt-1.5 inline-block size-2 shrink-0 rounded-full',
-        getAnnouncementColorClass(type)
+        unread ? 'bg-blue-500' : 'bg-gray-400'
       )}
     />
   )
@@ -243,7 +242,7 @@ function AnnouncementsContent({
                 }}
               >
                 <div className='flex items-start gap-3'>
-                  <AnnouncementDot type={item.type} />
+                  <AnnouncementDot unread={!isRead} />
                   <div className='flex min-w-0 flex-1 flex-col gap-2'>
                     <div className='text-sm'>
                       <RichContent breaks content={item.content || ''} />
@@ -296,8 +295,28 @@ export function NotificationPopover({
     markAnnouncementsRead([key])
   }
 
+  const handleDialogOpenChange = (
+    nextOpen: boolean,
+    eventDetails: { reason: string }
+  ) => {
+    // The announcement dialog is intentionally dismissible only through its
+    // explicit close controls. Ignore escape, trigger, and other implicit
+    // dismissal requests.
+    if (
+      nextOpen ||
+      eventDetails.reason === 'close-press' ||
+      eventDetails.reason === 'imperative-action'
+    ) {
+      onOpenChange(nextOpen)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={handleDialogOpenChange}
+      disablePointerDismissal
+    >
       <DialogTrigger
         render={
           <Button
