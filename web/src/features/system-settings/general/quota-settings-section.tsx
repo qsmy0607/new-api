@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { formatQuota } from '@/lib/format'
 
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
@@ -61,6 +62,8 @@ const quotaSchema = z.object({
   }),
   quota_setting: z.object({
     enable_free_model_pre_consume: z.boolean(),
+    new_user_quota_domain_restriction_enabled: z.boolean(),
+    new_user_quota_excluded_domains: z.string(),
   }),
 })
 
@@ -99,6 +102,18 @@ export function QuotaSettingsSection({
       defaultValues,
       onSubmit: async (_data, changedFields) => {
         for (const [key, value] of Object.entries(changedFields)) {
+          if (
+            key === 'quota_setting.new_user_quota_excluded_domains' &&
+            typeof value === 'string'
+          ) {
+            const domains = value
+              .split(/[\n,]/)
+              .map((domain) => domain.trim().toLowerCase())
+              .filter(Boolean)
+              .join(',')
+            await updateOption.mutateAsync({ key, value: domains })
+            continue
+          }
           await updateOption.mutateAsync({
             key,
             value: value as string | number | boolean,
@@ -157,6 +172,57 @@ export function QuotaSettingsSection({
                 </FormItem>
               )}
             />
+
+            <SettingsFormGridItem span='full'>
+              <FormField
+                control={form.control}
+                name='quota_setting.new_user_quota_domain_restriction_enabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem>
+                    <SettingsSwitchContent>
+                      <FormLabel>
+                        {t('Exclude Email Domains from New User Quota')}
+                      </FormLabel>
+                      <FormDescription>
+                        {t(
+                          'When enabled, users registering with listed email domains receive no new user quota.'
+                        )}
+                      </FormDescription>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={updateOption.isPending}
+                      />
+                    </FormControl>
+                  </SettingsSwitchItem>
+                )}
+              />
+            </SettingsFormGridItem>
+
+            <SettingsFormGridItem span='full'>
+              <FormField
+                control={form.control}
+                name='quota_setting.new_user_quota_excluded_domains'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Excluded Email Domains')}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t('example.com&#10;company.com')}
+                        rows={4}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('One domain per line. Matching is case-insensitive.')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </SettingsFormGridItem>
 
             <FormField
               control={form.control}

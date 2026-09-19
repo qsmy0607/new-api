@@ -212,9 +212,9 @@ export function CommonLogsFilterBar<TData>(
     [searchState]
   )
 
-  const handleApply = useCallback(() => {
+  const handleApply = useCallback(async () => {
     const filterParams = buildSearchParams(filters, 'common')
-    navigate({
+    await navigate({
       to: '/usage-logs/$section',
       params: { section: 'common' },
       search: {
@@ -223,6 +223,9 @@ export function CommonLogsFilterBar<TData>(
         page: 1,
       },
     })
+    // Wait for the route search state to settle before invalidating. Invalidating
+    // first refetches the old query while navigation starts the new one, which
+    // can briefly composite both result sets during the first search.
     queryClient.invalidateQueries({ queryKey: ['logs'] })
     queryClient.invalidateQueries({ queryKey: ['usage-logs-stats'] })
   }, [filters, logType, navigate, queryClient])
@@ -254,7 +257,7 @@ export function CommonLogsFilterBar<TData>(
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') handleApply()
+      if (e.key === 'Enter') void handleApply()
     },
     [handleApply]
   )

@@ -166,9 +166,9 @@ export function TaskLogsFilterBar<TData>(props: TaskLogsFilterBarProps<TData>) {
     [searchState]
   )
 
-  const handleApply = useCallback(() => {
+  const handleApply = useCallback(async () => {
     const filterParams = buildSearchParams(filters, props.logCategory)
-    navigate({
+    await navigate({
       to: '/usage-logs/$section',
       params: { section: props.logCategory },
       search: {
@@ -176,6 +176,8 @@ export function TaskLogsFilterBar<TData>(props: TaskLogsFilterBarProps<TData>) {
         page: 1,
       },
     })
+    // Let navigation activate the new query before invalidating it. Doing this
+    // in the opposite order refetches both old and new log queries together.
     queryClient.invalidateQueries({ queryKey: ['logs'] })
   }, [filters, navigate, props.logCategory, queryClient])
 
@@ -197,7 +199,7 @@ export function TaskLogsFilterBar<TData>(props: TaskLogsFilterBarProps<TData>) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') handleApply()
+      if (e.key === 'Enter') void handleApply()
     },
     [handleApply]
   )

@@ -26,6 +26,8 @@ import {
 
 const defaultBillingSettings: BillingSettings = {
   QuotaForNewUser: 0,
+  'quota_setting.new_user_quota_domain_restriction_enabled': false,
+  'quota_setting.new_user_quota_excluded_domains': '',
   PreConsumedQuota: 0,
   QuotaForInviter: 0,
   QuotaForInvitee: 0,

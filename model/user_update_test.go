@@ -2,10 +2,12 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -286,6 +288,61 @@ func TestInsertKeepsBlankPasswordForPasswordlessUser(t *testing.T) {
 	var stored User
 	require.NoError(t, DB.Where("username = ?", user.Username).First(&stored).Error)
 	assert.Empty(t, stored.Password)
+}
+
+func TestInsertAppliesNewUserQuotaEmailDomainRestriction(t *testing.T) {
+	setupUserUpdateTestState(t)
+
+	oldQuota := common.QuotaForNewUser
+	quotaSetting := operation_setting.GetQuotaSetting()
+	oldRestrictionEnabled := quotaSetting.NewUserQuotaDomainRestrictionEnabled
+	oldExcludedDomains := quotaSetting.NewUserQuotaExcludedDomains
+	t.Cleanup(func() {
+		common.QuotaForNewUser = oldQuota
+		quotaSetting.NewUserQuotaDomainRestrictionEnabled = oldRestrictionEnabled
+		quotaSetting.NewUserQuotaExcludedDomains = oldExcludedDomains
+	})
+
+	common.QuotaForNewUser = 1200
+	quotaSetting.NewUserQuotaDomainRestrictionEnabled = true
+	quotaSetting.NewUserQuotaExcludedDomains = " gmail.com, EXAMPLE.org "
+
+	tests := []struct {
+		name               string
+		email              string
+		wantQuota          int
+		withTx             bool
+		restrictionEnabled bool
+	}{
+		{name: "excluded domain", email: "user@GMAIL.COM", wantQuota: 0, restrictionEnabled: true},
+		{name: "exact domain matching", email: "user@notgmail.com", wantQuota: 1200, restrictionEnabled: true},
+		{name: "empty email", email: "", wantQuota: 1200, restrictionEnabled: true},
+		{name: "restriction disabled", email: "disabled@gmail.com", wantQuota: 1200},
+		{name: "oauth transaction path", email: "user@example.org", wantQuota: 0, withTx: true, restrictionEnabled: true},
+	}
+
+	for index, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			quotaSetting.NewUserQuotaDomainRestrictionEnabled = tt.restrictionEnabled
+			user := &User{
+				Username: fmt.Sprintf("quota-domain-user-%d", index),
+				Email:    tt.email,
+				Role:     common.RoleCommonUser,
+				Status:   common.UserStatusEnabled,
+			}
+			if tt.withTx {
+				require.NoError(t, DB.Transaction(func(tx *gorm.DB) error {
+					return user.InsertWithTx(tx, 0)
+				}))
+			} else {
+				require.NoError(t, user.Insert(0))
+			}
+
+			var stored User
+			require.NoError(t, DB.First(&stored, user.Id).Error)
+			assert.Equal(t, tt.wantQuota, stored.Quota)
+		})
+	}
 }
 
 func TestUpdateUserBindColumnOnlyTouchesTheBindingColumn(t *testing.T) {

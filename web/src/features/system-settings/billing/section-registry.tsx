@@ -70,6 +70,17 @@ const BILLING_SECTIONS = [
           quota_setting: {
             enable_free_model_pre_consume:
               settings['quota_setting.enable_free_model_pre_consume'],
+            new_user_quota_domain_restriction_enabled:
+              settings[
+                'quota_setting.new_user_quota_domain_restriction_enabled'
+              ],
+            new_user_quota_excluded_domains: settings[
+              'quota_setting.new_user_quota_excluded_domains'
+            ]
+              .split(',')
+              .map((domain) => domain.trim())
+              .filter(Boolean)
+              .join('\n'),
           },
         }}
         complianceConfirmed={

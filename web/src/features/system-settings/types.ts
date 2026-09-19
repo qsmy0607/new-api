@@ -257,6 +257,8 @@ export type ModelSettings = {
 
 export type BillingSettings = {
   QuotaForNewUser: number
+  'quota_setting.new_user_quota_domain_restriction_enabled': boolean
+  'quota_setting.new_user_quota_excluded_domains': string
   PreConsumedQuota: number
   QuotaForInviter: number
   QuotaForInvitee: number
