@@ -85,6 +85,8 @@ type User struct {
 	Role             int                        `json:"role" gorm:"type:int;default:1"`   // admin, common
 	Status           int                        `json:"status" gorm:"type:int;default:1"` // enabled, disabled
 	Email            string                     `json:"email" gorm:"index" validate:"max=50"`
+	RegistrationIP   string                     `json:"registration_ip" gorm:"type:varchar(64);column:registration_ip;index"`
+	LastLoginIP      string                     `json:"last_login_ip" gorm:"type:varchar(64);column:last_login_ip;index"`
 	GitHubId         string                     `json:"github_id" gorm:"column:github_id;index"`
 	DiscordId        string                     `json:"discord_id" gorm:"column:discord_id;index"`
 	OidcId           string                     `json:"oidc_id" gorm:"column:oidc_id;index"`
@@ -1370,9 +1372,12 @@ func GetRootUser() (user *User) {
 	return user
 }
 
-func UpdateUserLastLoginAt(id int) {
-	if err := DB.Model(&User{}).Where("id = ?", id).Update("last_login_at", common.GetTimestamp()).Error; err != nil {
-		common.SysLog("failed to update user last_login_at: " + err.Error())
+func UpdateUserLastLogin(id int, ip string) {
+	if err := DB.Model(&User{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"last_login_at": common.GetTimestamp(),
+		"last_login_ip": strings.TrimSpace(ip),
+	}).Error; err != nil {
+		common.SysLog("failed to update user last login: " + err.Error())
 	}
 }
 

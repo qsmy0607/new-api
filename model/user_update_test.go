@@ -345,6 +345,47 @@ func TestInsertAppliesNewUserQuotaEmailDomainRestriction(t *testing.T) {
 	}
 }
 
+func TestGetUserIPRisksAggregatesSharedAddresses(t *testing.T) {
+	setupUserUpdateTestState(t)
+
+	users := []User{
+		{Username: "ip-user-a", Password: "password", AffCode: "ip-aff-a", Status: common.UserStatusEnabled, Role: common.RoleCommonUser, RegistrationIP: "203.0.113.10", LastLoginIP: "198.51.100.20"},
+		{Username: "ip-user-b", Password: "password", AffCode: "ip-aff-b", Status: common.UserStatusEnabled, Role: common.RoleCommonUser, RegistrationIP: "203.0.113.10", LastLoginIP: "198.51.100.20"},
+		{Username: "ip-user-c", Password: "password", AffCode: "ip-aff-c", Status: common.UserStatusEnabled, Role: common.RoleCommonUser, RegistrationIP: "203.0.113.30", LastLoginIP: ""},
+	}
+	for index := range users {
+		require.NoError(t, DB.Create(&users[index]).Error)
+	}
+
+	result, total, err := GetUserIPRisks(UserIPRiskQuery{
+		SortBy:    "registration_ip_count",
+		SortOrder: "desc",
+		Limit:     20,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), total)
+	require.Len(t, result, 3)
+	assert.Equal(t, int64(2), result[0].RegistrationIPCount)
+	assert.Equal(t, int64(2), result[0].LastLoginIPCount)
+
+	related, err := GetUsersRelatedByIPs([]string{"203.0.113.10"}, UserIPScopeRegistration)
+	require.NoError(t, err)
+	assert.Len(t, related, 2)
+}
+
+func TestUpdateUserLastLoginStoresTimestampAndIP(t *testing.T) {
+	setupUserUpdateTestState(t)
+	user := User{Username: "login-ip-user", Password: "password", Status: common.UserStatusEnabled}
+	require.NoError(t, DB.Create(&user).Error)
+
+	UpdateUserLastLogin(user.Id, " 203.0.113.44 ")
+
+	var stored User
+	require.NoError(t, DB.First(&stored, user.Id).Error)
+	assert.Equal(t, "203.0.113.44", stored.LastLoginIP)
+	assert.Positive(t, stored.LastLoginAt)
+}
+
 func TestUpdateUserBindColumnOnlyTouchesTheBindingColumn(t *testing.T) {
 	truncateTables(t)
 

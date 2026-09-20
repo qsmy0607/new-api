@@ -16,6 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { IPRestrictionsTable } from '@/features/ip-restrictions/components/ip-restrictions-table'
+
 import type { AuthSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
 import { BasicAuthSection } from './basic-auth-section'
@@ -55,6 +57,11 @@ const AUTH_SECTIONS = [
         }}
       />
     ),
+  },
+  {
+    id: 'ip-restrictions',
+    titleKey: 'IP Restrictions',
+    build: () => <IPRestrictionsTable />,
   },
   {
     id: 'oauth',
