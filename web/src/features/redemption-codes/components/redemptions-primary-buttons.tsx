@@ -104,11 +104,11 @@ export function RedemptionsPrimaryButtons() {
           onClick={() => handleCopyTemplateOpenChange(true)}
         >
           <FilePenLine className='h-4 w-4' />
-          {t('Copy Template')}
+          {t('Template')}
         </Button>
         <Button size='sm' onClick={() => setOpen('create')}>
           <Plus className='h-4 w-4' />
-          {t('Create Code')}
+          {t('Create Redemption Code')}
         </Button>
       </div>
 
