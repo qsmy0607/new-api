@@ -41,6 +41,9 @@ export const LOG_TIME_PRESET_VALUES = [
   'thisMonth',
   'previousMonth',
   'previousMonthToDate',
+  'last3Months',
+  'last6Months',
+  'lastYear',
 ] as const
 
 export type LogTimePreset = (typeof LOG_TIME_PRESET_VALUES)[number]

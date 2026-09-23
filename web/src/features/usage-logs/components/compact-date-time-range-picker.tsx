@@ -402,6 +402,33 @@ export function CompactDateTimeRangePicker({
               >
                 {t('30 days')}
               </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                className='text-xs'
+                onClick={() => handleQuickRangeSelect('last3Months')}
+              >
+                {t('3 months')}
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                className='text-xs'
+                onClick={() => handleQuickRangeSelect('last6Months')}
+              >
+                {t('6 months')}
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                className='text-xs'
+                onClick={() => handleQuickRangeSelect('lastYear')}
+              >
+                {t('1 year')}
+              </Button>
             </div>
           )}
         </PopoverContent>

@@ -175,6 +175,18 @@ export function resolveLogTimeRange(
       start: now.subtract(29, 'day').startOf('day').toDate(),
       end: now.endOf('day').toDate(),
     },
+    last3Months: {
+      start: now.subtract(3, 'month').startOf('day').toDate(),
+      end: now.endOf('day').toDate(),
+    },
+    last6Months: {
+      start: now.subtract(6, 'month').startOf('day').toDate(),
+      end: now.endOf('day').toDate(),
+    },
+    lastYear: {
+      start: now.subtract(1, 'year').startOf('day').toDate(),
+      end: now.endOf('day').toDate(),
+    },
     thisMonth: {
       start: now.startOf('month').toDate(),
       end: now.endOf('month').toDate(),

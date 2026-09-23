@@ -79,6 +79,9 @@ const quickRanges = [
   ['This month', 'thisMonth', 'preset'],
   ['Previous month to date', 'previousMonthToDate', 'custom'],
   ['30 days', 'last30Days', 'preset'],
+  ['3 months', 'last3Months', 'preset'],
+  ['6 months', 'last6Months', 'preset'],
+  ['1 year', 'lastYear', 'preset'],
 ] as const
 
 async function renderPicker(
