@@ -96,6 +96,10 @@ const (
 // consumption logs so existing usage accounting keeps the same semantics.
 const LogTypeSubscription = 8
 
+// LogTypeBilling is a filter-only type backed by successful online payment
+// orders. It does not create rows in the logs table.
+const LogTypeBilling = 9
+
 const subscriptionBillingSourcePattern = `%"billing_source":"subscription"%`
 
 func applyLogTypeFilter(tx *gorm.DB, prefix string, logType int) *gorm.DB {

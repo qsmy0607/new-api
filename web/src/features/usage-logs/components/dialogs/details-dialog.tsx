@@ -511,6 +511,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
   const isRefund = props.log.type === 6
   const isConsume = props.log.type === 2
   const isTopup = props.log.type === 1
+  const isBilling = props.log.type === 9
   const isManage = props.log.type === 3
   const isSubscription = other?.billing_source === 'subscription'
   const isTieredBilling =
@@ -762,6 +763,47 @@ export function DetailsDialog(props: DetailsDialogProps) {
                 </span>
               }
             />
+          )}
+
+          {isBilling && (
+            <>
+              <DetailRow
+                label={t('Payment Amount')}
+                value={
+                  typeof props.log.payment_amount === 'number'
+                    ? props.log.payment_amount.toFixed(6)
+                    : '-'
+                }
+                mono
+              />
+              <DetailRow
+                label={t('Billing Type')}
+                value={
+                  props.log.billing_type === 'subscription'
+                    ? t('Subscription Payment')
+                    : t('Quota Top-up')
+                }
+              />
+              {props.log.payment_provider && (
+                <DetailRow
+                  label={t('Payment Provider')}
+                  value={props.log.payment_provider}
+                />
+              )}
+              {props.log.payment_method && (
+                <DetailRow
+                  label={t('Payment Method')}
+                  value={props.log.payment_method}
+                />
+              )}
+              {props.log.trade_no && (
+                <DetailRow
+                  label={t('Trade No')}
+                  value={props.log.trade_no}
+                  mono
+                />
+              )}
+            </>
           )}
         </div>
 

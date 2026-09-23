@@ -25,7 +25,7 @@ import { formatLogQuota } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 import { getLogStats, getUserLogStats } from '../api'
-import { DEFAULT_LOG_STATS } from '../constants'
+import { DEFAULT_LOG_STATS, LOG_TYPE_ENUM } from '../constants'
 import {
   buildApiParams,
   parseLogTimeSelection,
@@ -61,6 +61,11 @@ export function CommonLogsStats() {
     new Date(currentDayStart)
   )
   const timeRangeKey = [timeRange.start?.getTime(), timeRange.end?.getTime()]
+  const isBilling =
+    (Array.isArray(searchParams.type) &&
+      searchParams.type.length === 1 &&
+      Number(searchParams.type[0]) === LOG_TYPE_ENUM.BILLING) ||
+    Number(searchParams.type) === LOG_TYPE_ENUM.BILLING
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['usage-logs-stats', isAdmin, searchParams, timeRangeKey],
@@ -97,6 +102,21 @@ export function CommonLogsStats() {
 
   return (
     <div className='flex flex-wrap items-center gap-2'>
+      {isBilling ? (
+        <>
+          <StatBadge
+            label={t('Revenue')}
+            value={sensitiveVisible ? (stats?.amount || 0).toFixed(2) : '鈥⑩€⑩€⑩€?'}
+            accent='bg-emerald-500/70'
+          />
+          <StatBadge
+            label={t('Orders')}
+            value={stats?.order_count || 0}
+            accent='bg-sky-500/70'
+          />
+        </>
+      ) : (
+        <>
       <StatBadge
         label={t('Usage')}
         value={sensitiveVisible ? formatLogQuota(stats?.quota || 0) : '••••'}
@@ -112,6 +132,8 @@ export function CommonLogsStats() {
         value={stats?.tpm || 0}
         accent='bg-slate-400/70'
       />
+        </>
+      )}
     </div>
   )
 }
