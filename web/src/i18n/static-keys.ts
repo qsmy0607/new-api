@@ -485,6 +485,7 @@ export const STATIC_I18N_KEYS = [
   'Quota Top-up',
   'Subscription Payment',
   'Payment Provider',
+  'Payment Billing',
   'Trade No',
   'API usage records',
   'Drawing Logs',

@@ -96,7 +96,7 @@ export const LOG_TYPES = [
   { value: 1, label: 'Top-up', color: 'cyan' },
   { value: 2, label: 'Consume', color: 'green' },
   { value: LOG_TYPE_ENUM.SUBSCRIPTION, label: 'Subscription', color: 'blue' },
-  { value: LOG_TYPE_ENUM.BILLING, label: 'Billing', color: 'emerald' },
+  { value: LOG_TYPE_ENUM.BILLING, label: 'Payment Billing', color: 'emerald' },
   { value: 3, label: 'Manage', color: 'orange' },
   { value: 4, label: 'System', color: 'purple' },
   { value: 5, label: 'Error', color: 'red' },
