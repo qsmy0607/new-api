@@ -54,13 +54,8 @@ func GetUserLogs(c *gin.Context) {
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	if logType == model.LogTypeBilling {
-		records, total, err := model.GetBillingRecords(userId, startTimestamp, endTimestamp, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
-		pageInfo.SetTotal(int(total))
-		pageInfo.SetItems(records)
+		pageInfo.SetTotal(0)
+		pageInfo.SetItems([]*model.BillingRecord{})
 		common.ApiSuccess(c, pageInfo)
 		return
 	}
@@ -165,14 +160,9 @@ func GetLogsSelfStat(c *gin.Context) {
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	if logType == model.LogTypeBilling {
-		stats, err := model.GetBillingStatistics(c.GetInt("id"), startTimestamp, endTimestamp)
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
 		common.ApiSuccess(c, gin.H{
-			"amount":      stats.Amount,
-			"order_count": stats.OrderCount,
+			"amount":      0,
+			"order_count": 0,
 		})
 		return
 	}

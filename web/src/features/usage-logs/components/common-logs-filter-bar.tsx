@@ -38,7 +38,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-import { LOG_TYPE_ALL_VALUE, LOG_TYPE_FILTERS } from '../constants'
+import {
+  LOG_TYPE_ALL_VALUE,
+  LOG_TYPE_ENUM,
+  LOG_TYPE_FILTERS,
+} from '../constants'
 import { buildSearchParams, canResetCommonLogFilters } from '../lib/filter'
 import { parseLogTimeSelection, resolveLogTimeRange } from '../lib/utils'
 import type { CommonLogFilters, LogTimeSelection } from '../types'
@@ -289,11 +293,13 @@ export function CommonLogsFilterBar<TData>(
     : '[-webkit-text-security:disc]'
   const logTypeItems = useMemo(
     () =>
-      LOG_TYPE_FILTERS.map((type) => ({
+      LOG_TYPE_FILTERS.filter(
+        (type) => isAdmin || type.value !== String(LOG_TYPE_ENUM.BILLING)
+      ).map((type) => ({
         value: type.value,
         label: t(type.label),
       })),
-    [t]
+    [isAdmin, t]
   )
   const logTypeLabel =
     logTypeItems.find((type) => type.value === logType)?.label ?? t('All Types')
