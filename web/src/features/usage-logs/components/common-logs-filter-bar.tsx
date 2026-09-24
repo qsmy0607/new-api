@@ -37,6 +37,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { ROLE } from '@/lib/roles'
+import { useAuthStore } from '@/stores/auth-store'
 
 import {
   LOG_TYPE_ALL_VALUE,
@@ -123,6 +125,8 @@ export function CommonLogsFilterBar<TData>(
   const queryClient = useQueryClient()
   const searchParams = route.useSearch()
   const { isAdminView: isAdmin } = useLogsViewScope()
+  const userRole = useAuthStore((state) => state.auth.user?.role ?? ROLE.GUEST)
+  const canViewAdminLogTypes = userRole >= ROLE.ADMIN
   const { sensitiveVisible, setSensitiveVisible, currentDayStart } =
     useUsageLogsContext()
   const fetchingLogs = useIsFetching({ queryKey: ['logs'] })
@@ -295,13 +299,13 @@ export function CommonLogsFilterBar<TData>(
     () =>
       LOG_TYPE_FILTERS.filter(
         (type) =>
-          isAdmin ||
+          canViewAdminLogTypes ||
           !(ADMIN_ONLY_LOG_TYPES as readonly number[]).includes(Number(type.value))
       ).map((type) => ({
         value: type.value,
         label: t(type.label),
       })),
-    [isAdmin, t]
+    [canViewAdminLogTypes, t]
   )
   const logTypeLabel =
     logTypeItems.find((type) => type.value === logType)?.label ?? t('All Types')
