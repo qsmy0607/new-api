@@ -31,6 +31,7 @@ import {
 } from '../api'
 import {
   LOG_TYPES,
+  LOG_TYPE_ENUM,
   DISPLAYABLE_LOG_TYPES,
   TIMING_LOG_TYPES,
 } from '../constants'
@@ -387,6 +388,17 @@ export async function fetchLogsByCategory(
       columnFilters,
       isAdmin,
     })
+    if (!isAdmin && params.type === LOG_TYPE_ENUM.BILLING) {
+      return {
+        success: true,
+        data: {
+          items: [],
+          total: 0,
+          page,
+          page_size: pageSize,
+        },
+      }
+    }
     return isAdmin ? await getAllLogs(params) : await getUserLogs(params)
   }
 
