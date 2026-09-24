@@ -40,7 +40,7 @@ import {
 
 import {
   LOG_TYPE_ALL_VALUE,
-  LOG_TYPE_ENUM,
+  ADMIN_ONLY_LOG_TYPES,
   LOG_TYPE_FILTERS,
 } from '../constants'
 import { buildSearchParams, canResetCommonLogFilters } from '../lib/filter'
@@ -294,7 +294,9 @@ export function CommonLogsFilterBar<TData>(
   const logTypeItems = useMemo(
     () =>
       LOG_TYPE_FILTERS.filter(
-        (type) => isAdmin || type.value !== String(LOG_TYPE_ENUM.BILLING)
+        (type) =>
+          isAdmin ||
+          !(ADMIN_ONLY_LOG_TYPES as readonly number[]).includes(Number(type.value))
       ).map((type) => ({
         value: type.value,
         label: t(type.label),

@@ -594,7 +594,11 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 const logSearchCountLimit = 10000
 
 func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int64, modelName string, tokenName string, startIdx int, num int, group string, requestId string, upstreamRequestId string) (logs []*Log, total int64, err error) {
-	tx := applyLogTypeFilter(LOG_DB.Where("logs.user_id = ?", userId), "logs.", logType)
+	tx := applyLogTypeFilter(
+		LOG_DB.Where("logs.user_id = ?", userId).
+			Where("logs.type NOT IN ?", []int{LogTypeManage, LogTypeBilling}),
+		"logs.", logType,
+	)
 
 	if tx, err = applyExplicitLogTextFilter(tx, "logs.model_name", modelName); err != nil {
 		return nil, 0, err

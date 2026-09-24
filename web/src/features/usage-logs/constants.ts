@@ -70,6 +70,11 @@ export const LOG_TYPE_ENUM = {
  */
 export const LOG_TYPE_ALL_VALUE = '0' as const
 
+export const ADMIN_ONLY_LOG_TYPES = [
+  LOG_TYPE_ENUM.MANAGE,
+  LOG_TYPE_ENUM.BILLING,
+] as const
+
 // ============================================================================
 // Time Range Presets
 // ============================================================================

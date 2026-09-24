@@ -31,7 +31,7 @@ import {
 } from '../api'
 import {
   LOG_TYPES,
-  LOG_TYPE_ENUM,
+  ADMIN_ONLY_LOG_TYPES,
   DISPLAYABLE_LOG_TYPES,
   TIMING_LOG_TYPES,
 } from '../constants'
@@ -388,7 +388,11 @@ export async function fetchLogsByCategory(
       columnFilters,
       isAdmin,
     })
-    if (!isAdmin && params.type === LOG_TYPE_ENUM.BILLING) {
+    if (
+      !isAdmin &&
+      params.type != null &&
+      (ADMIN_ONLY_LOG_TYPES as readonly number[]).includes(params.type)
+    ) {
       return {
         success: true,
         data: {
