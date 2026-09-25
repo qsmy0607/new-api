@@ -260,6 +260,18 @@ func Register(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
+	if len([]rune(user.Username)) > 20 {
+		common.ApiErrorI18n(c, i18n.MsgUserUsernameTooLong, map[string]any{"Max": 20})
+		return
+	}
+	if len([]rune(user.Password)) < 8 {
+		common.ApiErrorI18n(c, i18n.MsgUserPasswordTooShort, map[string]any{"Min": 8})
+		return
+	}
+	if len([]rune(user.Password)) > 20 {
+		common.ApiErrorI18n(c, i18n.MsgUserPasswordTooLong, map[string]any{"Max": 20})
+		return
+	}
 	if err := common.Validate.Struct(&user); err != nil {
 		common.ApiErrorI18n(c, i18n.MsgUserInputInvalid, map[string]any{"Error": err.Error()})
 		return
