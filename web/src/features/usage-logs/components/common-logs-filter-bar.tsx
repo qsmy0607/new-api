@@ -393,9 +393,9 @@ export function CommonLogsFilterBar<TData>(
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>
           <SelectGroup>
-            {LOG_TYPE_FILTERS.map((type) => (
+            {logTypeItems.map((type) => (
               <SelectItem key={type.value} value={type.value}>
-                {t(type.label)}
+                {type.label}
               </SelectItem>
             ))}
           </SelectGroup>
