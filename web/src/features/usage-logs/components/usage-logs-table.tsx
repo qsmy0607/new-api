@@ -170,9 +170,16 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
       return result.data || DEFAULT_LOGS_DATA
     },
     placeholderData: (previousData, previousQuery) => {
+      // Keep the current page visible while paging, but clear it when the
+      // search/filter query changes. Rendering the old rows during a search
+      // transition makes the table briefly composite stale and fresh results.
+      const previousKey = previousQuery?.queryKey
       if (
-        previousQuery?.queryKey[1] === logCategory &&
-        previousQuery.queryKey[2] === viewAccess
+        previousKey?.[1] === logCategory &&
+        previousKey[2] === viewAccess &&
+        JSON.stringify(previousKey[5]) === JSON.stringify(columnFilters) &&
+        JSON.stringify(previousKey[6]) === JSON.stringify(searchParams) &&
+        JSON.stringify(previousKey[7]) === JSON.stringify(timeRangeKey)
       ) {
         return previousData
       }
