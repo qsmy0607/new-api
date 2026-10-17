@@ -1,6 +1,10 @@
 package operation_setting
 
-import "github.com/QuantumNous/new-api/setting/config"
+import (
+	"math"
+
+	"github.com/QuantumNous/new-api/setting/config"
+)
 
 type PaymentSetting struct {
 	AmountOptions  []int           `json:"amount_options"`
@@ -28,6 +32,38 @@ func init() {
 
 func GetPaymentSetting() *PaymentSetting {
 	return &paymentSetting
+}
+
+// GetGlobalPaymentDiscount treats a uniform legacy amount-discount map as a
+// global discount. This keeps existing installations compatible while making
+// the same configured discount apply to custom recharge amounts.
+func GetGlobalPaymentDiscount() (float64, bool) {
+	var discount float64
+	found := false
+	for _, candidate := range paymentSetting.AmountDiscount {
+		if candidate <= 0 || candidate > 1 || math.IsNaN(candidate) || math.IsInf(candidate, 0) {
+			continue
+		}
+		if !found {
+			discount = candidate
+			found = true
+			continue
+		}
+		if candidate != discount {
+			return 0, false
+		}
+	}
+	return discount, found
+}
+
+func GetPaymentDiscount(amount int64) float64 {
+	if discount, ok := GetGlobalPaymentDiscount(); ok {
+		return discount
+	}
+	if discount, ok := paymentSetting.AmountDiscount[int(amount)]; ok && discount > 0 && discount <= 1 {
+		return discount
+	}
+	return 1
 }
 
 func IsPaymentComplianceConfirmed() bool {

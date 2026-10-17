@@ -134,6 +134,8 @@ export interface TopupInfo {
   amount_options: number[]
   /** Discount rates by amount */
   discount: Record<number, number>
+  /** Discount rate applied to every recharge amount */
+  global_discount?: number
   /** Optional topup link for purchasing codes */
   topup_link?: string
   /** Whether Creem topup is enabled */

@@ -89,3 +89,22 @@ func TestGetWaffoPancakePayMoney(t *testing.T) {
 		})
 	}
 }
+
+func TestGetWaffoPancakePayMoney_UniformDiscountAppliesToCustomAmount(t *testing.T) {
+	originalUnitPrice := setting.WaffoPancakeUnitPrice
+	originalDiscounts := operation_setting.GetPaymentSetting().AmountDiscount
+	originalTopupGroupRatio := common.TopupGroupRatio2JSONString()
+	t.Cleanup(func() {
+		setting.WaffoPancakeUnitPrice = originalUnitPrice
+		operation_setting.GetPaymentSetting().AmountDiscount = originalDiscounts
+		require.NoError(t, common.UpdateTopupGroupRatioByJSONString(originalTopupGroupRatio))
+	})
+
+	setting.WaffoPancakeUnitPrice = 1
+	operation_setting.GetPaymentSetting().AmountDiscount = map[int]float64{
+		40: 0.5, 200: 0.5, 400: 0.5, 1000: 0.5,
+	}
+	require.NoError(t, common.UpdateTopupGroupRatioByJSONString(`{"default":1}`))
+
+	require.InDelta(t, 50, getWaffoPancakePayMoney(100, "default"), 0.000001)
+}

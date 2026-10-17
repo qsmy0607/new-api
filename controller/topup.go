@@ -119,6 +119,13 @@ func GetTopUpInfo(c *gin.Context) {
 		"waffo_pancake_min_topup": setting.WaffoPancakeMinTopUp,
 		"amount_options":          operation_setting.GetPaymentSetting().AmountOptions,
 		"discount":                operation_setting.GetPaymentSetting().AmountDiscount,
+		"global_discount":         func() float64 {
+			discount, ok := operation_setting.GetGlobalPaymentDiscount()
+			if !ok {
+				return 1
+			}
+			return discount
+		}(),
 		"topup_link":              common.TopUpLink,
 	}
 	common.ApiSuccess(c, data)
@@ -163,13 +170,7 @@ func getPayMoney(amount int64, group string) float64 {
 
 	dTopupGroupRatio := decimal.NewFromFloat(topupGroupRatio)
 	dPrice := decimal.NewFromFloat(operation_setting.Price)
-	// apply optional preset discount by the original request amount (if configured), default 1.0
-	discount := 1.0
-	if ds, ok := operation_setting.GetPaymentSetting().AmountDiscount[int(amount)]; ok {
-		if ds > 0 {
-			discount = ds
-		}
-	}
+	discount := operation_setting.GetPaymentDiscount(amount)
 	dDiscount := decimal.NewFromFloat(discount)
 
 	payMoney := dAmount.Mul(dPrice).Mul(dTopupGroupRatio).Mul(dDiscount)

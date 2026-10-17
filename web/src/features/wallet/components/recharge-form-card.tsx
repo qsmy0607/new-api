@@ -229,6 +229,7 @@ export function RechargeFormCard({
                   <div className='grid grid-cols-2 gap-1.5 sm:gap-3 md:grid-cols-4'>
                     {presetAmounts.map((preset) => {
                       const discount =
+                        topupInfo?.global_discount ||
                         preset.discount ||
                         topupInfo?.discount?.[preset.value] ||
                         1.0
