@@ -75,9 +75,9 @@ func SearchRedemptions(keyword string, status string, startIdx int, num int) (re
 
 	if keyword != "" {
 		if id, err := strconv.Atoi(keyword); err == nil {
-			query = query.Where("id = ? OR name LIKE ?", id, keyword+"%")
+			query = query.Where("id = ? OR name LIKE ? OR key LIKE ?", id, keyword+"%", keyword+"%")
 		} else {
-			query = query.Where("name LIKE ?", keyword+"%")
+			query = query.Where("name LIKE ? OR key LIKE ?", keyword+"%", keyword+"%")
 		}
 	}
 
