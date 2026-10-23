@@ -24,9 +24,12 @@ import type {
   LogCleanupTask,
   SystemOptionsResponse,
   SystemTaskListResponse,
+  SystemTaskFilters,
   SystemTaskResponse,
   UpdateOptionRequest,
   UpdateOptionResponse,
+  UpdatePasskeyDomainsRequest,
+  UpdatePasskeyDomainsResponse,
   UpstreamChannelsResponse,
   UpstreamRatiosResponse,
 } from './types'
@@ -41,14 +44,17 @@ export async function updateSystemOption(request: UpdateOptionRequest) {
   return res.data
 }
 
-export async function uploadContactQRCode(file: File) {
-  const formData = new FormData()
-  formData.append('file', file)
-  const res = await api.post<{
-    success: boolean
-    message: string
-    data?: { url: string }
-  }>('/api/option/contact-wechat-qrcode', formData)
+export async function updatePasskeyDomains(
+  request: UpdatePasskeyDomainsRequest
+) {
+  const res = await api.put<UpdatePasskeyDomainsResponse>(
+    '/api/option/passkey/domains',
+    request,
+    {
+      validateStatus: (status) =>
+        (status >= 200 && status < 300) || status === 409,
+    }
+  )
   return res.data
 }
 
@@ -88,9 +94,12 @@ export async function getSystemTask(taskId: string) {
   return res.data
 }
 
-export async function listSystemTasks(limit = 20) {
+export async function listSystemTasks(
+  limit = 20,
+  filters: SystemTaskFilters = {}
+) {
   const res = await api.get<SystemTaskListResponse>('/api/system-task/list', {
-    params: { limit },
+    params: { limit, ...filters },
   })
   return res.data
 }

@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
+import i18next from 'i18next'
 import type { ChangeEvent } from 'react'
 import type { Resolver } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -34,7 +35,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
 import { formatQuota } from '@/lib/format'
 
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
@@ -53,17 +53,22 @@ import { useUpdateOption } from '../hooks/use-update-option'
 
 const quotaSchema = z.object({
   QuotaForNewUser: z.coerce.number().min(0),
-  PreConsumedQuota: z.coerce.number().min(0),
   QuotaForInviter: z.coerce.number().min(0),
   QuotaForInvitee: z.coerce.number().min(0),
   TopUpLink: z.string(),
-  general_setting: z.object({
-    docs_link: z.string(),
-  }),
   quota_setting: z.object({
     enable_free_model_pre_consume: z.boolean(),
-    new_user_quota_domain_restriction_enabled: z.boolean(),
-    new_user_quota_excluded_domains: z.string(),
+    trust_quota_usd: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.coerce
+        .number({ error: () => i18next.t('Please enter a valid number') })
+        .min(0, {
+          error: () => i18next.t('Must be greater than or equal to 0'),
+        })
+    ),
+    pre_consume_multiplier: z.coerce
+      .number({ error: () => i18next.t('Please enter a valid number') })
+      .positive({ error: () => i18next.t('Must be greater than 0') }),
   }),
 })
 
@@ -102,18 +107,6 @@ export function QuotaSettingsSection({
       defaultValues,
       onSubmit: async (_data, changedFields) => {
         for (const [key, value] of Object.entries(changedFields)) {
-          if (
-            key === 'quota_setting.new_user_quota_excluded_domains' &&
-            typeof value === 'string'
-          ) {
-            const domains = value
-              .split(/[\n,]/)
-              .map((domain) => domain.trim().toLowerCase())
-              .filter(Boolean)
-              .join(',')
-            await updateOption.mutateAsync({ key, value: domains })
-            continue
-          }
           await updateOption.mutateAsync({
             key,
             value: value as string | number | boolean,
@@ -173,75 +166,58 @@ export function QuotaSettingsSection({
               )}
             />
 
-            <SettingsFormGridItem span='full'>
-              <FormField
-                control={form.control}
-                name='quota_setting.new_user_quota_domain_restriction_enabled'
-                render={({ field }) => (
-                  <SettingsSwitchItem>
-                    <SettingsSwitchContent>
-                      <FormLabel>
-                        {t('Exclude Email Domains from New User Quota')}
-                      </FormLabel>
-                      <FormDescription>
-                        {t(
-                          'When enabled, users registering with listed email domains receive no new user quota.'
-                        )}
-                      </FormDescription>
-                    </SettingsSwitchContent>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={updateOption.isPending}
-                      />
-                    </FormControl>
-                  </SettingsSwitchItem>
-                )}
-              />
-            </SettingsFormGridItem>
-
-            <SettingsFormGridItem span='full'>
-              <FormField
-                control={form.control}
-                name='quota_setting.new_user_quota_excluded_domains'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('Excluded Email Domains')}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={t('example.com&#10;company.com')}
-                        rows={4}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {t('One domain per line. Matching is case-insensitive.')}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </SettingsFormGridItem>
-
             <FormField
               control={form.control}
-              name='PreConsumedQuota'
+              name='quota_setting.trust_quota_usd'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('Pre-Consumed Quota')}</FormLabel>
+                  <FormLabel>
+                    {t('Wallet pre-consume bypass threshold (USD)')}
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type='number'
+                      min={0}
+                      step='any'
                       value={field.value ?? ''}
-                      onChange={handleNumberChange(field.onChange)}
+                      onChange={field.onChange}
                       name={field.name}
                       onBlur={field.onBlur}
                       ref={field.ref}
                     />
                   </FormControl>
                   <FormDescription>
-                    {t('Quota consumed before charging users')}
+                    {t(
+                      'Skip pre-consumption when the wallet balance and limited API key balance both exceed this amount. Set to 0 to always pre-consume. Subscriptions and asynchronous tasks always reserve quota.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='quota_setting.pre_consume_multiplier'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Input pre-consume multiplier')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='number'
+                      min={0}
+                      step='any'
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      name={field.name}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Reserve the estimated input cost multiplied by this value, without estimating output tokens. Defaults to 1; positive decimals such as 0.5 and 1.5 are supported. Final charges use actual usage. Per-request and task prices are unaffected.'
+                    )}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -343,26 +319,6 @@ export function QuotaSettingsSection({
                   </FormControl>
                   <FormDescription>
                     {t('External link for users to purchase quota')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='general_setting.docs_link'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Documentation Link')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={t('https://docs.example.com')}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t('Link to your documentation site')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

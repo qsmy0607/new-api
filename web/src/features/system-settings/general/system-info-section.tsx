@@ -17,13 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Trash2 } from 'lucide-react'
-import { useState } from 'react'
 import type { Resolver } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
 
-import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -35,13 +32,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 
-import { uploadContactQRCode } from '../api'
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
 import { FormNavigationGuard } from '../components/form-navigation-guard'
 import {
@@ -53,10 +44,6 @@ import { SettingsPageFormActions } from '../components/settings-page-context'
 import { SettingsSection } from '../components/settings-section'
 import { useSettingsForm } from '../hooks/use-settings-form'
 import { useUpdateOption } from '../hooks/use-update-option'
-import {
-  getContactQRCodeUploadError,
-  isContactQRCodeValue,
-} from './contact-qr-code'
 import { isValidTaskPublicAddress } from './task-public-address'
 
 const _systemInfoSchema = z.object({
@@ -67,8 +54,9 @@ const _systemInfoSchema = z.object({
   Footer: z.string().optional(),
   About: z.string().optional(),
   HomePageContent: z.string().optional(),
-  ContactEmail: z.string().email().optional().or(z.literal('')),
-  ContactWechatQRCodeURL: z.string().refine(isContactQRCodeValue),
+  general_setting: z.object({
+    docs_link: z.string(),
+  }),
   legal: z.object({
     user_agreement: z.string().optional(),
     privacy_policy: z.string().optional(),
@@ -89,8 +77,6 @@ function normalizeValue(value: unknown): string {
 export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
-  const [isUploadingContactQRCode, setIsUploadingContactQRCode] =
-    useState(false)
 
   const normalizedDefaults: SystemInfoFormValues = {
     SystemName: normalizeValue(defaultValues.SystemName),
@@ -100,10 +86,9 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     Footer: normalizeValue(defaultValues.Footer),
     About: normalizeValue(defaultValues.About),
     HomePageContent: normalizeValue(defaultValues.HomePageContent),
-    ContactEmail: normalizeValue(defaultValues.ContactEmail),
-    ContactWechatQRCodeURL: normalizeValue(
-      defaultValues.ContactWechatQRCodeURL
-    ),
+    general_setting: {
+      docs_link: normalizeValue(defaultValues.general_setting?.docs_link),
+    },
     legal: {
       user_agreement: normalizeValue(defaultValues.legal?.user_agreement),
       privacy_policy: normalizeValue(defaultValues.legal?.privacy_policy),
@@ -125,13 +110,8 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     Footer: z.string().optional(),
     About: z.string().optional(),
     HomePageContent: z.string().optional(),
-    ContactEmail: z
-      .string()
-      .email(t('Enter a valid email address'))
-      .optional()
-      .or(z.literal('')),
-    ContactWechatQRCodeURL: z.string().refine(isContactQRCodeValue, {
-      error: t('Invalid QR code image.'),
+    general_setting: z.object({
+      docs_link: z.string(),
     }),
     legal: z.object({
       user_agreement: z.string().optional(),
@@ -160,50 +140,6 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
         }
       },
     })
-  const contactQRCodeValue = form.watch('ContactWechatQRCodeURL')
-
-  const handleContactQRCodeChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-
-    const uploadError = getContactQRCodeUploadError(file)
-    if (uploadError === 'invalid_type') {
-      form.setError('ContactWechatQRCodeURL', {
-        message: t('Please upload a PNG, JPEG, or WebP image.'),
-      })
-      return
-    }
-    if (uploadError === 'too_large') {
-      form.setError('ContactWechatQRCodeURL', {
-        message: t('The QR code image must be 1 MB or smaller.'),
-      })
-      return
-    }
-
-    setIsUploadingContactQRCode(true)
-    try {
-      const response = await uploadContactQRCode(file)
-      if (!response.success || !response.data?.url) {
-        form.setError('ContactWechatQRCodeURL', {
-          message: t('Request failed'),
-        })
-        return
-      }
-      form.setValue('ContactWechatQRCodeURL', response.data.url, {
-        shouldDirty: true,
-        shouldValidate: true,
-      })
-    } catch {
-      form.setError('ContactWechatQRCodeURL', {
-        message: t('Request failed'),
-      })
-    } finally {
-      setIsUploadingContactQRCode(false)
-    }
-  }
 
   return (
     <>
@@ -215,11 +151,7 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
             <SettingsPageFormActions
               onSave={handleSubmit}
               onReset={handleReset}
-              isSaving={
-                isSubmitting ||
-                updateOption.isPending ||
-                isUploadingContactQRCode
-              }
+              isSaving={isSubmitting || updateOption.isPending}
               isResetDisabled={!isDirty}
             />
             <FormDirtyIndicator isDirty={isDirty} />
@@ -304,73 +236,19 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
 
               <FormField
                 control={form.control}
-                name='ContactEmail'
+                name='general_setting.docs_link'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('Contact Email')}</FormLabel>
+                    <FormLabel>{t('Documentation Link')}</FormLabel>
                     <FormControl>
                       <Input
-                        type='email'
-                        placeholder='support@example.com'
-                        autoComplete='email'
+                        placeholder={t('https://docs.example.com')}
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      {t('Email address shown in the contact menu')}
+                      {t('Link to your documentation site')}
                     </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='ContactWechatQRCodeURL'
-                render={() => (
-                  <FormItem>
-                    <FormLabel>{t('WeChat Contact QR Code')}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type='file'
-                        accept='image/png,image/jpeg,image/webp'
-                        onChange={handleContactQRCodeChange}
-                        disabled={isUploadingContactQRCode}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {t('Upload a PNG, JPEG, or WebP image up to 1 MB.')}
-                    </FormDescription>
-                    {contactQRCodeValue ? (
-                      <div className='flex items-start gap-3 border-t pt-3'>
-                        <img
-                          src={contactQRCodeValue}
-                          alt={t('Contact QR code preview')}
-                          className='size-24 object-contain'
-                        />
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type='button'
-                                variant='outline'
-                                size='icon'
-                                aria-label={t('Remove QR code')}
-                                onClick={() =>
-                                  form.setValue('ContactWechatQRCodeURL', '', {
-                                    shouldDirty: true,
-                                    shouldValidate: true,
-                                  })
-                                }
-                              >
-                                <Trash2 aria-hidden='true' />
-                              </Button>
-                            }
-                          />
-                          <TooltipContent>{t('Remove QR code')}</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}
