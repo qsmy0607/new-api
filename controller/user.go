@@ -89,9 +89,11 @@ func Login(c *gin.Context) {
 			common.SysLog(common.LogText("Login database error for user %s: %v", username, err))
 			common.ApiErrorT(c, "Database error, please contact the administrator")
 		case errors.Is(err, model.ErrUserEmptyCredentials):
-			common.ApiErrorT(c, "Invalid parameters")
+			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		case errors.Is(err, model.ErrUserDisabled):
+			common.ApiErrorI18n(c, i18n.MsgUserDisabled)
 		default:
-			common.ApiErrorT(c, "Username or password is incorrect, or user has been banned")
+			common.ApiErrorI18n(c, i18n.MsgUserUsernameOrPasswordError)
 		}
 		return
 	}

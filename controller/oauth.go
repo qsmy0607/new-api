@@ -484,7 +484,7 @@ func findOrCreateOAuthUser(c *gin.Context, provider oauth.Provider, oauthUser *o
 		return nil, nil, &OAuthRegistrationDisabledError{}
 	}
 	if registrationIPBlocked(c) {
-		return nil, errRegistrationIPBlocked
+		return nil, nil, errRegistrationIPBlocked
 	}
 
 	// Set up new user

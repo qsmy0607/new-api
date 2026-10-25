@@ -86,10 +86,10 @@ func TestOAuthRegistrationRejectsBlockedIPButExistingLoginIsAllowed(t *testing.T
 	oauthUser := &oauth.OAuthUser{ProviderUserID: "external-user"}
 
 	c, _ := blockedRegistrationContext()
-	_, err := findOrCreateOAuthUser(c, &registrationIPTestProvider{}, oauthUser, "")
+	_, _, err := findOrCreateOAuthUser(c, &registrationIPTestProvider{}, oauthUser, nil, "")
 	assert.ErrorIs(t, err, errRegistrationIPBlocked)
 
-	existingUser, err := findOrCreateOAuthUser(c, &registrationIPTestProvider{existing: true}, oauthUser, "")
+	existingUser, _, err := findOrCreateOAuthUser(c, &registrationIPTestProvider{existing: true}, oauthUser, nil, "")
 	require.NoError(t, err)
 	assert.Equal(t, 42, existingUser.Id)
 }

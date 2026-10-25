@@ -26,7 +26,7 @@ func TestAllLogsSubscriptionFilterReturnsOnlySubscriptionConsumption(t *testing.
 	truncateTables(t)
 	insertSubscriptionFilterLogs(t)
 
-	allLogs, allTotal, err := GetAllLogs(LogTypeSubscription, 0, 0, "", "", "", 0, 20, 0, "", "", "")
+	allLogs, allTotal, err := GetAllLogs(LogFilter{Type: LogTypeSubscription}, 0, 20)
 	require.NoError(t, err)
 	assert.EqualValues(t, 2, allTotal)
 	require.Len(t, allLogs, 2)
@@ -37,7 +37,7 @@ func TestUserLogsSubscriptionFilterReturnsOnlyOwnedSubscriptionConsumption(t *te
 	truncateTables(t)
 	insertSubscriptionFilterLogs(t)
 
-	userLogs, userTotal, err := GetUserLogs(1, LogTypeSubscription, 0, 0, "", "", 0, 20, "", "", "")
+	userLogs, userTotal, err := GetUserLogs(1, LogFilter{Type: LogTypeSubscription}, 0, 20)
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, userTotal)
 	require.Len(t, userLogs, 1)

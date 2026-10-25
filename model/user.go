@@ -145,18 +145,22 @@ func (user *User) SetAccessToken(token string) {
 
 // UpdateUserAccessToken rotates a dashboard personal access token without
 // writing a stale user snapshot back over concurrently updated fields.
-func updateLegacyUserAccessToken(id int, token string) error {
-	if id == 0 {
-		return errors.New("id 为空！")
-	}
-	result := DB.Model(&User{}).Where("id = ?", id).Update("access_token", token)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-	return nil
+func RevokeUserAccessToken(id int) (string, error) {
+	var tokenRef string
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		var user User
+		if err := lockForUpdate(tx).Select("id", "access_token").First(&user, id).Error; err != nil {
+			return err
+		}
+		tokenRef = AccessTokenFingerprint(user.GetAccessToken())
+		if tokenRef == "" {
+			return nil
+		}
+		return tx.Model(&User{}).Where("id = ?", id).Updates(map[string]any{
+			"access_token": nil, "access_token_created_at": nil,
+		}).Error
+	})
+	return tokenRef, err
 }
 
 func (user *User) GetSetting() dto.UserSetting {
@@ -544,17 +548,17 @@ func GetUserIdByAffCode(affCode string) (int, error) {
 	return user.Id, err
 }
 
-func DeleteUserById(id int) (err error) {
+func DeleteUserById(id int) (int64, error) {
 	if id == 0 {
-		return errors.New("id 为空！")
+		return 0, common.NewMessage("ID is empty!")
 	}
 	user := User{Id: id}
 	return user.Delete()
 }
 
-func HardDeleteUserById(id int) error {
+func HardDeleteUserById(id int) (int64, error) {
 	if id == 0 {
-		return errors.New("id 为空！")
+		return 0, common.NewMessage("ID is empty!")
 	}
 	user := User{Id: id}
 	return user.HardDelete()
@@ -941,39 +945,70 @@ func (user *User) ClearBinding(bindingType string) error {
 	return updateUserCache(*user)
 }
 
-func (user *User) Delete() error {
+func (user *User) Delete() (int64, error) {
+	return user.delete(nil)
+}
+
+func DeleteUserForSession(identity AuthSessionIdentity) (int64, error) {
+	user := User{Id: identity.UserID}
+	return user.delete(&identity)
+}
+
+func (user *User) delete(identity *AuthSessionIdentity) (int64, error) {
 	if user.Id == 0 {
-		return errors.New("id 为空！")
+		return 0, common.NewMessage("ID is empty!")
 	}
 	var nextAuthVersion int64
+	var revokedAccessTokens int64
 	if err := DB.Transaction(func(tx *gorm.DB) error {
+		if identity != nil {
+			if err := ValidateAuthSessionWithTx(tx, *identity); err != nil {
+				return err
+			}
+			var role int
+			if err := tx.Model(&User{}).Where("id = ?", user.Id).Select("role").Scan(&role).Error; err != nil {
+				return err
+			}
+			if role == common.RoleRootUser {
+				return ErrCannotDeleteRootUser
+			}
+		}
 		var err error
 		nextAuthVersion, err = IncrementUserAuthVersionWithTx(tx, user.Id)
 		if err != nil {
 			return err
 		}
+		revokedAccessTokens, err = DeleteUserAccessTokensWithTx(tx, user.Id)
+		if err != nil {
+			return err
+		}
 		return tx.Delete(user).Error
 	}); err != nil {
-		return err
+		return 0, err
 	}
 	if err := publishCommittedUserAuthVersion(user.Id, nextAuthVersion); err != nil {
-		return err
+		return revokedAccessTokens, err
 	}
 	if _, err := RevokeAllUserSessions(user.Id, "user_deleted"); err != nil {
-		return err
+		return revokedAccessTokens, err
 	}
-	return invalidateUserCache(user.Id)
+	return revokedAccessTokens, invalidateUserCache(user.Id)
 }
 
-func (user *User) HardDelete() error {
+func (user *User) HardDelete() (int64, error) {
 	if user.Id == 0 {
-		return errors.New("id 为空！")
+		return 0, common.NewMessage("ID is empty!")
 	}
 	var tokens []Token
 	var deletedAuthVersion int64
+	var revokedAccessTokens int64
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var err error
 		deletedAuthVersion, err = IncrementUserAuthVersionWithTx(tx, user.Id)
+		if err != nil {
+			return err
+		}
+		revokedAccessTokens, err = DeleteUserAccessTokensWithTx(tx, user.Id)
 		if err != nil {
 			return err
 		}
@@ -988,7 +1023,7 @@ func (user *User) HardDelete() error {
 		return tx.Unscoped().Delete(user).Error
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if err := publishCommittedUserAuthVersion(user.Id, deletedAuthVersion); err != nil {
 		common.SysError(fmt.Sprintf("failed to publish auth tombstone after hard deleting user %d: %v", user.Id, err))
@@ -999,7 +1034,7 @@ func (user *User) HardDelete() error {
 	if err := invalidateUserCache(user.Id); err != nil {
 		common.SysError(fmt.Sprintf("failed to invalidate user cache after hard deleting user %d: %v", user.Id, err))
 	}
-	return nil
+	return revokedAccessTokens, nil
 }
 
 func deleteUserAuthenticationData(tx *gorm.DB, userId int) error {
@@ -1206,6 +1241,9 @@ func IsAdmin(userId int) bool {
 func ValidateAccessToken(token string) (*User, error) {
 	if token == "" {
 		return nil, nil
+	}
+	if LegacyAccessTokensRetired(common.GetTimestamp()) {
+		return nil, ErrLegacyAccessTokenRetired
 	}
 	token = strings.Replace(token, "Bearer ", "", 1)
 	user := &User{}

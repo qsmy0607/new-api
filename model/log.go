@@ -95,6 +95,8 @@ const (
 	LogTypeBilling      = 9
 )
 
+const subscriptionBillingSourcePattern = `%"billing_source":"subscription"%`
+
 func ensureLogRequestId(log *Log) {
 	if log != nil && log.RequestId == "" {
 		log.RequestId = common.NewRequestId()
@@ -495,7 +497,10 @@ type LogFilter struct {
 
 func (f LogFilter) apply(tx *gorm.DB) (*gorm.DB, error) {
 	var err error
-	if f.Type != LogTypeUnknown {
+	if f.Type == LogTypeSubscription {
+		tx = tx.Where("logs.type = ?", LogTypeConsume).
+			Where("logs.other LIKE ?", subscriptionBillingSourcePattern)
+	} else if f.Type != LogTypeUnknown {
 		tx = tx.Where("logs.type = ?", f.Type)
 	}
 	if tx, err = applyExplicitLogTextFilter(tx, "logs.model_name", f.ModelName); err != nil {
@@ -730,6 +735,10 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 
 	tx = tx.Where("type = ?", LogTypeConsume)
 	rpmTpmQuery = rpmTpmQuery.Where("type = ?", LogTypeConsume)
+	if logType == LogTypeSubscription {
+		tx = tx.Where("other LIKE ?", subscriptionBillingSourcePattern)
+		rpmTpmQuery = rpmTpmQuery.Where("other LIKE ?", subscriptionBillingSourcePattern)
+	}
 
 	// 只统计最近60秒的rpm和tpm
 	rpmTpmQuery = rpmTpmQuery.Where("created_at >= ?", time.Now().Add(-60*time.Second).Unix())
