@@ -512,7 +512,7 @@ func TestLogTaskConsumptionPersistsSubscriptionFunding(t *testing.T) {
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/videos", nil)
 	ctx.Set("username", "test_user")
 	info := &relaycommon.RelayInfo{
-		UserId:                 1,
+		UserId:                  1,
 		OriginModelName:         "test-model",
 		BillingSource:           BillingSourceSubscription,
 		SubscriptionId:          42,

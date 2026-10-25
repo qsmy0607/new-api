@@ -10,11 +10,11 @@ import (
 )
 
 type QuotaSetting struct {
-	NewUserQuotaDomainRestrictionEnabled bool   `json:"new_user_quota_domain_restriction_enabled"`
-	NewUserQuotaExcludedDomains          string `json:"new_user_quota_excluded_domains"`
-	EnableFreeModelPreConsume bool    `json:"enable_free_model_pre_consume"` // 是否对免费模型启用预消耗
-	TrustQuotaUSD             float64 `json:"trust_quota_usd"`               // 钱包免预扣门槛，0 表示禁用
-	PreConsumeMultiplier      float64 `json:"pre_consume_multiplier"`        // 预计输入费用的预扣倍率，仅影响预留
+	NewUserQuotaDomainRestrictionEnabled bool    `json:"new_user_quota_domain_restriction_enabled"`
+	NewUserQuotaExcludedDomains          string  `json:"new_user_quota_excluded_domains"`
+	EnableFreeModelPreConsume            bool    `json:"enable_free_model_pre_consume"` // 是否对免费模型启用预消耗
+	TrustQuotaUSD                        float64 `json:"trust_quota_usd"`               // 钱包免预扣门槛，0 表示禁用
+	PreConsumeMultiplier                 float64 `json:"pre_consume_multiplier"`        // 预计输入费用的预扣倍率，仅影响预留
 }
 
 // 默认配置

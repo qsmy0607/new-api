@@ -49,6 +49,12 @@ func LogTaskConsumption(c *gin.Context, info *relaycommon.RelayInfo, task *model
 	}
 	other := model.NewLogOther()
 	other.SetPublic("is_task", true)
+	if info.BillingSource != "" {
+		other.SetPublic("billing_source", info.BillingSource)
+	}
+	if info.SubscriptionId > 0 {
+		other.SetPublic("subscription_id", info.SubscriptionId)
+	}
 	other.SetPublic("request_path", c.Request.URL.Path)
 	if taskDeliveredInline(c, task) {
 		other.SetPublic("task_sync", true)
@@ -149,6 +155,12 @@ func taskBillingOther(task *model.Task) *model.LogOther {
 	other := model.NewLogOther()
 	// 前端列表按 is_task 选择任务档位渲染分支,缺失会把差额/退款日志误判成普通 relay 动态计费
 	other.SetPublic("is_task", true)
+	if task.PrivateData.BillingSource != "" {
+		other.SetPublic("billing_source", task.PrivateData.BillingSource)
+	}
+	if task.PrivateData.SubscriptionId > 0 {
+		other.SetPublic("subscription_id", task.PrivateData.SubscriptionId)
+	}
 	if bc := task.PrivateData.BillingContext; bc != nil {
 		other.SetPublic("model_price", bc.ModelPrice)
 		if bc.ModelRatio > 0 {
