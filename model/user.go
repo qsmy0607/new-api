@@ -145,7 +145,7 @@ func (user *User) SetAccessToken(token string) {
 
 // UpdateUserAccessToken rotates a dashboard personal access token without
 // writing a stale user snapshot back over concurrently updated fields.
-func UpdateUserAccessToken(id int, token string) error {
+func updateLegacyUserAccessToken(id int, token string) error {
 	if id == 0 {
 		return errors.New("id 为空！")
 	}
@@ -366,9 +366,16 @@ func EnsureEmailAvailable(email string, excludeUserID int) error {
 //
 // An empty email is allowed to repeat and needs no serialization.
 func withNormalizedEmailLock(tx *gorm.DB, email string, fn func(tx *gorm.DB) error) error {
+	if err := lockNormalizedEmail(tx, email); err != nil {
+		return err
+	}
+	return fn(tx)
+}
+
+func lockNormalizedEmail(tx *gorm.DB, email string) error {
 	email = NormalizeEmail(email)
 	if email == "" {
-		return fn(tx)
+		return nil
 	}
 	switch {
 	case common.UsingMainDatabase(common.DatabaseTypePostgreSQL):
@@ -381,7 +388,7 @@ func withNormalizedEmailLock(tx *gorm.DB, email string, fn func(tx *gorm.DB) err
 			return err
 		}
 	}
-	return fn(tx)
+	return nil
 }
 
 func GetMaxUserId() int {

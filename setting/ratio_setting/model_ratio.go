@@ -455,8 +455,8 @@ func GetCompletionRatioInfo(name string) CompletionRatioInfo {
 // configuration snapshot or draft without consulting mutable saved settings.
 func ResolveCompletionRatio(name string, configured *float64) CompletionRatioInfo {
 	name = FormatMatchingModelName(name)
-	if strings.Contains(name, "/") && configured != nil {
-		return CompletionRatioInfo{Ratio: *configured}
+	if configured != nil {
+		return CompletionRatioInfo{Ratio: *configured, Locked: false}
 	}
 
 	hardCodedRatio, locked := getHardcodedCompletionModelRatio(name)
@@ -464,13 +464,6 @@ func ResolveCompletionRatio(name string, configured *float64) CompletionRatioInf
 		return CompletionRatioInfo{
 			Ratio:  hardCodedRatio,
 			Locked: true,
-		}
-	}
-
-	if configured != nil {
-		return CompletionRatioInfo{
-			Ratio:  *configured,
-			Locked: false,
 		}
 	}
 

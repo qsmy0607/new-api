@@ -90,6 +90,11 @@ const (
 	LogTypeLogin   = 7
 )
 
+const (
+	LogTypeSubscription = 8
+	LogTypeBilling      = 9
+)
+
 func ensureLogRequestId(log *Log) {
 	if log != nil && log.RequestId == "" {
 		log.RequestId = common.NewRequestId()
