@@ -54,6 +54,8 @@ const _systemInfoSchema = z.object({
   Footer: z.string().optional(),
   About: z.string().optional(),
   HomePageContent: z.string().optional(),
+  ContactEmail: z.string().optional(),
+  ContactWechatQRCodeURL: z.string().optional(),
   general_setting: z.object({
     docs_link: z.string(),
   }),
@@ -86,6 +88,10 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     Footer: normalizeValue(defaultValues.Footer),
     About: normalizeValue(defaultValues.About),
     HomePageContent: normalizeValue(defaultValues.HomePageContent),
+    ContactEmail: normalizeValue(defaultValues.ContactEmail),
+    ContactWechatQRCodeURL: normalizeValue(
+      defaultValues.ContactWechatQRCodeURL
+    ),
     general_setting: {
       docs_link: normalizeValue(defaultValues.general_setting?.docs_link),
     },

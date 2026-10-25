@@ -264,7 +264,7 @@ export function RechargeFormCard({
                                 className='shrink-0 text-[10px] leading-3 font-medium whitespace-nowrap text-green-600'
                                 data-preset-discount='true'
                               >
-                                {getDiscountLabel(discount)}
+                                {getDiscountLabel(discount, t)}
                               </div>
                             )}
                           </div>

@@ -21,8 +21,11 @@ import { persist } from 'zustand/middleware'
 
 interface NotificationState {
   readAnnouncementKeys: string[]
+  lastReadNotice: string
   lastAutoOpenedAnnouncementSignature: string
+  markNoticeRead: (notice: string) => void
   markAnnouncementsRead: (keys: string[]) => void
+  isAnnouncementRead: (key: string) => boolean
   setLastAutoOpenedAnnouncementSignature: (signature: string) => void
 }
 
@@ -32,9 +35,12 @@ interface NotificationState {
  */
 export const useNotificationStore = create<NotificationState>()(
   persist(
-    (set) => ({
-      readAnnouncementKeys: [],
+    (set, get) => ({
+      readAnnouncementKeys: [] as string[],
+      lastReadNotice: '',
       lastAutoOpenedAnnouncementSignature: '',
+
+      markNoticeRead: (notice: string) => set({ lastReadNotice: notice }),
 
       markAnnouncementsRead: (keys: string[]) => {
         set((state) => ({
@@ -44,6 +50,9 @@ export const useNotificationStore = create<NotificationState>()(
         }))
       },
 
+      isAnnouncementRead: (key: string): boolean =>
+        get().readAnnouncementKeys.includes(key),
+
       setLastAutoOpenedAnnouncementSignature: (signature: string) => {
         set({ lastAutoOpenedAnnouncementSignature: signature })
       },
@@ -52,6 +61,7 @@ export const useNotificationStore = create<NotificationState>()(
       name: 'notification-storage',
       partialize: (state) => ({
         readAnnouncementKeys: state.readAnnouncementKeys,
+        lastReadNotice: state.lastReadNotice,
         lastAutoOpenedAnnouncementSignature:
           state.lastAutoOpenedAnnouncementSignature,
       }),

@@ -16,24 +16,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { FilePenLine, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { handleServerError } from '@/lib/handle-server-error'
 
 import { deleteInvalidRedemptions } from '../api'
 import { ERROR_MESSAGES } from '../constants'
@@ -41,30 +31,10 @@ import { useRedemptions } from './redemptions-provider'
 
 export function RedemptionsPrimaryButtons() {
   const { t } = useTranslation()
-  const {
-    setOpen,
-    triggerRefresh,
-    redemptionCopyTemplate,
-    saveRedemptionCopyTemplate,
-  } = useRedemptions()
+  const { setOpen, triggerRefresh } = useRedemptions()
   const [showDeleteInvalidConfirm, setShowDeleteInvalidConfirm] =
     useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [showCopyTemplateDialog, setShowCopyTemplateDialog] = useState(false)
-  const [copyTemplateDraft, setCopyTemplateDraft] = useState(
-    redemptionCopyTemplate
-  )
-
-  const handleCopyTemplateOpenChange = (isOpen: boolean) => {
-    if (isOpen) setCopyTemplateDraft(redemptionCopyTemplate)
-    setShowCopyTemplateDialog(isOpen)
-  }
-
-  const handleSaveCopyTemplate = () => {
-    saveRedemptionCopyTemplate(copyTemplateDraft)
-    setShowCopyTemplateDialog(false)
-    toast.success(t('Redemption copy template saved'))
-  }
 
   const handleDeleteInvalid = async () => {
     setIsDeleting(true)
@@ -80,7 +50,7 @@ export function RedemptionsPrimaryButtons() {
         triggerRefresh()
         setShowDeleteInvalidConfirm(false)
       } else {
-        toast.error(result.message || t(ERROR_MESSAGES.DELETE_INVALID_FAILED))
+        handleServerError(result, t(ERROR_MESSAGES.DELETE_INVALID_FAILED))
       }
     } finally {
       setIsDeleting(false)
@@ -98,17 +68,9 @@ export function RedemptionsPrimaryButtons() {
           <Trash2 className='text-destructive h-4 w-4' />
           {t('Delete Invalid')}
         </Button>
-        <Button
-          size='sm'
-          variant='outline'
-          onClick={() => handleCopyTemplateOpenChange(true)}
-        >
-          <FilePenLine className='h-4 w-4' />
-          {t('Template')}
-        </Button>
         <Button size='sm' onClick={() => setOpen('create')}>
           <Plus className='h-4 w-4' />
-          {t('Create Redemption Code')}
+          {t('Create Code')}
         </Button>
       </div>
 
@@ -122,51 +84,17 @@ export function RedemptionsPrimaryButtons() {
         title={t('Delete Invalid Redemption Codes?')}
         desc={
           <>
-            {t('This will delete all')} <strong>{t('used')}</strong>,{' '}
-            <strong>{t('disabled')}</strong>
-            {t(', and')} <strong>{t('expired')}</strong>{' '}
-            {t('redemption codes.')}
+            <Trans
+              t={t}
+              i18nKey='This will delete all <strong>used</strong>, <strong>disabled</strong>, and <strong>expired</strong> redemption codes.'
+              components={{ strong: <strong /> }}
+            />
             <br />
             {t('This action cannot be undone.')}
           </>
         }
         confirmText={t('Delete Invalid')}
       />
-
-      <Dialog
-        open={showCopyTemplateDialog}
-        onOpenChange={handleCopyTemplateOpenChange}
-      >
-        <DialogContent className='sm:max-w-lg'>
-          <DialogHeader>
-            <DialogTitle>{t('Redemption Copy Template')}</DialogTitle>
-            <DialogDescription>
-              {t(
-                'Use {{placeholder}} as the redemption code placeholder. It will be replaced with the actual code when copied.',
-                { placeholder: '{{code}}' }
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className='space-y-2'>
-            <Label htmlFor='redemption-copy-template'>
-              {t('Redemption Copy Template')}
-            </Label>
-            <Textarea
-              id='redemption-copy-template'
-              value={copyTemplateDraft}
-              onChange={(event) => setCopyTemplateDraft(event.target.value)}
-              placeholder={t('Enter the redemption code copy template')}
-              className='min-h-40 resize-y'
-            />
-          </div>
-          <DialogFooter>
-            <DialogClose render={<Button variant='outline' />}>
-              {t('Cancel')}
-            </DialogClose>
-            <Button onClick={handleSaveCopyTemplate}>{t('Save')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

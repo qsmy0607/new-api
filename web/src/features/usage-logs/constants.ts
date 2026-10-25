@@ -60,8 +60,6 @@ export const LOG_TYPE_ENUM = {
   ERROR: 5,
   REFUND: 6,
   LOGIN: 7,
-  SUBSCRIPTION: 8,
-  BILLING: 9,
 } as const
 
 /**
@@ -69,11 +67,6 @@ export const LOG_TYPE_ENUM = {
  * Row rendering still displays records with type=0 as "Unknown".
  */
 export const LOG_TYPE_ALL_VALUE = '0' as const
-
-export const ADMIN_ONLY_LOG_TYPES = [
-  LOG_TYPE_ENUM.MANAGE,
-  LOG_TYPE_ENUM.BILLING,
-] as const
 
 // ============================================================================
 // Time Range Presets
@@ -100,8 +93,6 @@ export const LOG_TYPES = [
   { value: 0, label: 'Unknown', color: 'default' },
   { value: 1, label: 'Top-up', color: 'cyan' },
   { value: 2, label: 'Consume', color: 'green' },
-  { value: LOG_TYPE_ENUM.SUBSCRIPTION, label: 'Subscription', color: 'blue' },
-  { value: LOG_TYPE_ENUM.BILLING, label: 'Payment Billing', color: 'emerald' },
   { value: 3, label: 'Manage', color: 'orange' },
   { value: 4, label: 'System', color: 'purple' },
   { value: 5, label: 'Error', color: 'red' },

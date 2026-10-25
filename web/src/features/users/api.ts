@@ -152,7 +152,7 @@ export async function deleteUser(
 export async function manageUser(
   id: number,
   action: ManageUserAction,
-  proofToken: string
+  proofToken = ''
 ): Promise<ApiResponse<Partial<User>>> {
   const res = await api.post(
     '/api/user/manage',

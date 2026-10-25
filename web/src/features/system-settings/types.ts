@@ -154,6 +154,8 @@ export type SiteSettings = {
   'legal.privacy_policy': string
   HeaderNavModules: string
   SidebarModulesAdmin: string
+  ContactEmail?: string
+  ContactWechatQRCodeURL: string
 }
 
 export type AuthSettings = {
@@ -164,6 +166,8 @@ export type AuthSettings = {
   EmailDomainRestrictionEnabled: boolean
   EmailAliasRestrictionEnabled: boolean
   EmailDomainWhitelist: string
+  RegistrationIPBlacklistEnabled: boolean
+  RegistrationIPBlacklist: string
   ServerAddress: string
   GitHubOAuthEnabled: boolean
   GitHubClientId: string
@@ -278,6 +282,8 @@ export type BillingSettings = {
   'quota_setting.enable_free_model_pre_consume': boolean
   'quota_setting.trust_quota_usd': number
   'quota_setting.pre_consume_multiplier': number
+  'quota_setting.new_user_quota_domain_restriction_enabled': boolean
+  'quota_setting.new_user_quota_excluded_domains': string
   QuotaPerUnit: number
   USDExchangeRate: number
   'general_setting.quota_display_type': string

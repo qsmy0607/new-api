@@ -19,39 +19,38 @@ For commercial licensing, please contact support@quantumnous.com
 import { useQuery } from '@tanstack/react-query'
 import { getRouteApi } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 
 import {
   DataTablePage,
   DataTableRow,
   useDataTable,
 } from '@/components/data-table'
+import {
+  getAdminPlans,
+  getSelfSubscriptionFull,
+} from '@/features/subscriptions/api'
 import { useMediaQuery } from '@/hooks'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
+import { createServerError } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 import {
   DEFAULT_LOGS_DATA,
   LOG_TYPE_ALL_VALUE,
   LOG_TYPE_ENUM,
 } from '../constants'
+import { shouldShowBillingSource } from '../lib/billing-source'
 import { useColumnsByCategory } from '../lib/columns'
 import { parseLogOther } from '../lib/format'
-import {
-  fetchLogsByCategory,
-  parseLogTimeSelection,
-  resolveLogTimeRange,
-} from '../lib/utils'
+import { fetchLogsByCategory } from '../lib/utils'
 import type { LogCategory } from '../types'
 import { CommonLogsFilterBar } from './common-logs-filter-bar'
 import { TaskLogsFilterBar } from './task-logs-filter-bar'
 import { UsageLogsMobileList } from './usage-logs-mobile-card'
-import {
-  useLogsViewScope,
-  useUsageLogsContext,
-  type LogsViewAccess,
-} from './usage-logs-provider'
+import { useLogsViewScope, type LogsViewAccess } from './usage-logs-provider'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
 
@@ -87,19 +86,41 @@ interface UsageLogsTableProps {
 
 export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   const { t } = useTranslation()
+  const getColumnClassName = useCallback(
+    () => (logCategory === 'common' ? 'py-2' : 'py-3.5'),
+    [logCategory]
+  )
   const {
     isAdminView: isAdmin,
     isRootView: isRoot,
     viewAccess,
   } = useLogsViewScope()
-  const { currentDayStart } = useUsageLogsContext()
   const isMobile = useMediaQuery('(max-width: 640px)')
   const searchParams = route.useSearch()
-  const timeRange = resolveLogTimeRange(
-    parseLogTimeSelection(searchParams),
-    new Date(currentDayStart)
-  )
-  const timeRangeKey = [timeRange.start?.getTime(), timeRange.end?.getTime()]
+  const userId = useAuthStore((state) => state.auth.user?.id)
+  const { data: showBillingSource = false } = useQuery({
+    queryKey: ['usage-log-billing-source', isAdmin, userId],
+    enabled: logCategory === 'common' && userId != null,
+    queryFn: async () => {
+      if (isAdmin) {
+        const plansResult = await getAdminPlans()
+        return shouldShowBillingSource({
+          isAdmin,
+          plans: plansResult.success ? plansResult.data : undefined,
+          subscriptions: undefined,
+        })
+      }
+
+      const selfResult = await getSelfSubscriptionFull()
+      return shouldShowBillingSource({
+        isAdmin,
+        plans: undefined,
+        subscriptions: selfResult.success
+          ? selfResult.data?.subscriptions
+          : undefined,
+      })
+    },
+  })
 
   const {
     columnFilters,
@@ -148,7 +169,6 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
       pagination.pageSize,
       columnFilters,
       searchParams,
-      timeRangeKey,
       t,
     ],
     queryFn: async () => {
@@ -159,27 +179,18 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
         pageSize: pagination.pageSize,
         searchParams,
         columnFilters,
-        timeRange,
       })
 
       if (!result?.success) {
-        toast.error(result?.message || t('Failed to load logs'))
-        return DEFAULT_LOGS_DATA
+        throw createServerError(result, t('Failed to load logs'))
       }
 
       return result.data || DEFAULT_LOGS_DATA
     },
     placeholderData: (previousData, previousQuery) => {
-      // Keep the current page visible while paging, but clear it when the
-      // search/filter query changes. Rendering the old rows during a search
-      // transition makes the table briefly composite stale and fresh results.
-      const previousKey = previousQuery?.queryKey
       if (
-        previousKey?.[1] === logCategory &&
-        previousKey[2] === viewAccess &&
-        JSON.stringify(previousKey[5]) === JSON.stringify(columnFilters) &&
-        JSON.stringify(previousKey[6]) === JSON.stringify(searchParams) &&
-        JSON.stringify(previousKey[7]) === JSON.stringify(timeRangeKey)
+        previousQuery?.queryKey[1] === logCategory &&
+        previousQuery.queryKey[2] === viewAccess
       ) {
         return previousData
       }
@@ -188,7 +199,12 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   })
 
   const logs = data?.items || []
-  const columns = useColumnsByCategory(logCategory, isAdmin, isRoot)
+  const columns = useColumnsByCategory(
+    logCategory,
+    isAdmin,
+    isRoot,
+    showBillingSource
+  )
   const isLoadingData = isLoading || (isFetching && !data)
 
   const { table } = useDataTable({
@@ -214,6 +230,7 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   return (
     <DataTablePage
       table={table}
+      compactPagination={isMobile && isCommon}
       columns={columns as ColumnDef<Record<string, unknown>>[]}
       isLoading={isLoadingData}
       isFetching={isFetching}
@@ -260,7 +277,8 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
             key={row.id}
             row={row}
             className={cn('transition-colors', tintClass)}
-            getColumnClassName={() => (isCommon ? 'py-2' : 'py-3.5')}
+            getColumnClassName={getColumnClassName}
+            cellRenderColumns={table.options.columns}
           />
         )
       }}

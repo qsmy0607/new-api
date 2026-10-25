@@ -18,35 +18,25 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQueryClient, useIsFetching } from '@tanstack/react-query'
 import { useNavigate, getRouteApi } from '@tanstack/react-router'
-import type { Table } from '@tanstack/react-table'
-import { useCallback, useMemo, useState } from 'react'
+import { type Table } from '@tanstack/react-table'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { buildSearchParams, canResetTaskLogFilters } from '../lib/filter'
-import { parseLogTimeSelection, resolveLogTimeRange } from '../lib/utils'
-import type {
-  DrawingLogFilters,
-  LogCategory,
-  LogTimeSelection,
-  TaskLogFilters,
-} from '../types'
+import { buildSearchParams } from '../lib/filter'
+import { getDefaultTimeRange } from '../lib/utils'
+import type { DrawingLogFilters, LogCategory, TaskLogFilters } from '../types'
 import { CompactDateTimeRangePicker } from './compact-date-time-range-picker'
 import {
   LogsFilterField,
   LogsFilterInput,
   LogsFilterToolbar,
 } from './logs-filter-toolbar'
-import { useLogsViewScope, useUsageLogsContext } from './usage-logs-provider'
+import { useLogsViewScope } from './usage-logs-provider'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
 
 type TaskLikeLogCategory = Extract<LogCategory, 'drawing' | 'task'>
 type TaskLogsFilters = DrawingLogFilters | TaskLogFilters
-
-type TaskLogsDraft = {
-  sourceKey: string
-  filters: TaskLogsFilters
-}
 
 interface TaskLogsFilterBarProps<TData> {
   table: Table<TData>
@@ -80,16 +70,20 @@ export function TaskLogsFilterBar<TData>(props: TaskLogsFilterBarProps<TData>) {
   const queryClient = useQueryClient()
   const searchParams = route.useSearch()
   const { isAdminView: isAdmin } = useLogsViewScope()
-  const { currentDayStart } = useUsageLogsContext()
   const fetchingLogs = useIsFetching({ queryKey: ['logs'] })
 
-  const searchState = useMemo<TaskLogsDraft>(() => {
+  const [filters, setFilters] = useState<TaskLogsFilters>(() => {
+    const { start, end } = getDefaultTimeRange()
+    return { startTime: start, endTime: end }
+  })
+
+  useEffect(() => {
+    const { start, end } = getDefaultTimeRange()
     const baseFilters = {
-      timeRange: parseLogTimeSelection({
-        rangePreset: searchParams.rangePreset,
-        startTime: searchParams.startTime,
-        endTime: searchParams.endTime,
-      }),
+      startTime: searchParams.startTime
+        ? new Date(searchParams.startTime)
+        : start,
+      endTime: searchParams.endTime ? new Date(searchParams.endTime) : end,
       ...(searchParams.channel
         ? { channel: String(searchParams.channel) }
         : {}),
@@ -105,70 +99,25 @@ export function TaskLogsFilterBar<TData>(props: TaskLogsFilterBarProps<TData>) {
             ...(searchParams.filter ? { taskId: searchParams.filter } : {}),
           }
 
-    return {
-      sourceKey: [
-        props.logCategory,
-        searchParams.rangePreset,
-        searchParams.startTime,
-        searchParams.endTime,
-        searchParams.channel,
-        searchParams.filter,
-      ]
-        .map((value) => String(value ?? ''))
-        .join('\u001f'),
-      filters: next,
-    }
+    setFilters(next)
   }, [
     props.logCategory,
-    searchParams.rangePreset,
     searchParams.startTime,
     searchParams.endTime,
     searchParams.channel,
     searchParams.filter,
   ])
-  const [draft, setDraft] = useState<TaskLogsDraft>(() => searchState)
-  const activeDraft =
-    draft.sourceKey === searchState.sourceKey ? draft : searchState
-  const filters = activeDraft.filters
-  const resolvedTimeRange = resolveLogTimeRange(
-    filters.timeRange,
-    new Date(currentDayStart)
-  )
 
   const handleChange = useCallback(
-    (
-      field: Exclude<keyof TaskLogsFilters, 'timeRange'>,
-      value: string | undefined
-    ) => {
-      setDraft((current) => {
-        const base =
-          current.sourceKey === searchState.sourceKey ? current : searchState
-        return {
-          sourceKey: searchState.sourceKey,
-          filters: { ...base.filters, [field]: value },
-        }
-      })
+    (field: keyof TaskLogsFilters, value: Date | string | undefined) => {
+      setFilters((prev) => ({ ...prev, [field]: value }))
     },
-    [searchState]
+    []
   )
 
-  const handleTimeRangeChange = useCallback(
-    (timeRange: LogTimeSelection) => {
-      setDraft((current) => {
-        const base =
-          current.sourceKey === searchState.sourceKey ? current : searchState
-        return {
-          sourceKey: searchState.sourceKey,
-          filters: { ...base.filters, timeRange },
-        }
-      })
-    },
-    [searchState]
-  )
-
-  const handleApply = useCallback(async () => {
+  const handleApply = useCallback(() => {
     const filterParams = buildSearchParams(filters, props.logCategory)
-    await navigate({
+    navigate({
       to: '/usage-logs/$section',
       params: { section: props.logCategory },
       search: {
@@ -176,46 +125,38 @@ export function TaskLogsFilterBar<TData>(props: TaskLogsFilterBarProps<TData>) {
         page: 1,
       },
     })
-    // Let navigation activate the new query before invalidating it. Doing this
-    // in the opposite order refetches both old and new log queries together.
     queryClient.invalidateQueries({ queryKey: ['logs'] })
   }, [filters, navigate, props.logCategory, queryClient])
 
   const handleReset = useCallback(() => {
-    const resetFilters: TaskLogsFilters = {
-      timeRange: { kind: 'preset', preset: 'today' },
-    }
-    setDraft({ sourceKey: searchState.sourceKey, filters: resetFilters })
+    const { start, end } = getDefaultTimeRange()
+    const resetFilters: TaskLogsFilters = { startTime: start, endTime: end }
+    setFilters(resetFilters)
 
     navigate({
       to: '/usage-logs/$section',
       params: { section: props.logCategory },
       search: {
         page: 1,
+        startTime: start.getTime(),
+        endTime: end.getTime(),
       },
     })
     queryClient.invalidateQueries({ queryKey: ['logs'] })
-  }, [navigate, props.logCategory, queryClient, searchState.sourceKey])
+  }, [navigate, props.logCategory, queryClient])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') void handleApply()
+      if (e.key === 'Enter') handleApply()
     },
     [handleApply]
   )
 
   const handleFilterChange = useCallback(
     (value: string) => {
-      setDraft((current) => {
-        const base =
-          current.sourceKey === searchState.sourceKey ? current : searchState
-        return {
-          sourceKey: searchState.sourceKey,
-          filters: setFilterValue(base.filters, props.logCategory, value),
-        }
-      })
+      setFilters((prev) => setFilterValue(prev, props.logCategory, value))
     },
-    [props.logCategory, searchState]
+    [props.logCategory]
   )
 
   const filterValue = getFilterValue(filters, props.logCategory)
@@ -223,17 +164,16 @@ export function TaskLogsFilterBar<TData>(props: TaskLogsFilterBarProps<TData>) {
     props.logCategory === 'drawing'
       ? t('Filter by MjProxy task ID')
       : t('Filter by task ID')
-  const hasAdditionalFilters = canResetTaskLogFilters(
-    filters,
-    searchState.filters,
-    props.logCategory
-  )
+  const hasAdditionalFilters = !!filterValue || !!filters.channel
   const dateRangeFilter = (
     <LogsFilterField wide>
       <CompactDateTimeRangePicker
-        start={resolvedTimeRange.start}
-        end={resolvedTimeRange.end}
-        onChange={handleTimeRangeChange}
+        start={filters.startTime}
+        end={filters.endTime}
+        onChange={({ start, end }) => {
+          handleChange('startTime', start)
+          handleChange('endTime', end)
+        }}
       />
     </LogsFilterField>
   )

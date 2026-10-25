@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { formatQuota } from '@/lib/format'
 
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
@@ -58,6 +59,8 @@ const quotaSchema = z.object({
   TopUpLink: z.string(),
   quota_setting: z.object({
     enable_free_model_pre_consume: z.boolean(),
+    new_user_quota_domain_restriction_enabled: z.boolean().optional(),
+    new_user_quota_excluded_domains: z.string().optional(),
     trust_quota_usd: z.preprocess(
       (value) => (value === '' ? undefined : value),
       z.coerce
@@ -65,10 +68,11 @@ const quotaSchema = z.object({
         .min(0, {
           error: () => i18next.t('Must be greater than or equal to 0'),
         })
-    ),
+    ).optional(),
     pre_consume_multiplier: z.coerce
       .number({ error: () => i18next.t('Please enter a valid number') })
-      .positive({ error: () => i18next.t('Must be greater than 0') }),
+      .positive({ error: () => i18next.t('Must be greater than 0') })
+      .optional(),
   }),
 })
 
@@ -80,7 +84,10 @@ function formatQuotaInputValue(value: QuotaInputValue): string {
 }
 
 type QuotaSettingsSectionProps = {
-  defaultValues: QuotaFormValues
+  defaultValues: QuotaFormValues & {
+    PreConsumedQuota?: number
+    general_setting?: { docs_link?: string }
+  }
   complianceConfirmed?: boolean
 }
 
@@ -160,6 +167,56 @@ export function QuotaSettingsSection({
                         formattedQuota: formatQuotaInputValue(field.value),
                       }
                     )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='quota_setting.new_user_quota_domain_restriction_enabled'
+              render={({ field }) => (
+                <SettingsSwitchItem>
+                  <SettingsSwitchContent
+                  >
+                    <FormLabel>
+                      {t('Exclude Email Domains from New User Quota')}
+                    </FormLabel>
+                    <FormDescription>
+                      {t(
+                        'Do not grant the initial quota when a verified email uses an excluded domain.'
+                      )}
+                    </FormDescription>
+                  </SettingsSwitchContent>
+                  <FormControl>
+                    <Switch
+                      checked={field.value ?? false}
+                      onCheckedChange={field.onChange}
+                      aria-label={t(
+                        'Exclude Email Domains from New User Quota'
+                      )}
+                    />
+                  </FormControl>
+                </SettingsSwitchItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='quota_setting.new_user_quota_excluded_domains'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Excluded Email Domains')}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      value={field.value ?? ''}
+                      aria-label={t('Excluded Email Domains')}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t('Enter one email domain per line.')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

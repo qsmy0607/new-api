@@ -26,12 +26,8 @@ import { requireServerSuccess } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 
 import { getLogStats, getUserLogStats } from '../api'
-import { DEFAULT_LOG_STATS, LOG_TYPE_ENUM } from '../constants'
-import {
-  buildApiParams,
-  parseLogTimeSelection,
-  resolveLogTimeRange,
-} from '../lib/utils'
+import { DEFAULT_LOG_STATS } from '../constants'
+import { buildApiParams } from '../lib/utils'
 import { useLogsViewScope, useUsageLogsContext } from './usage-logs-provider'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
@@ -56,26 +52,15 @@ export function CommonLogsStats() {
   const { t } = useTranslation()
   const { isAdminView: isAdmin } = useLogsViewScope()
   const searchParams = route.useSearch()
-  const { sensitiveVisible, currentDayStart } = useUsageLogsContext()
-  const timeRange = resolveLogTimeRange(
-    parseLogTimeSelection(searchParams),
-    new Date(currentDayStart)
-  )
-  const timeRangeKey = [timeRange.start?.getTime(), timeRange.end?.getTime()]
-  const isBilling =
-    (Array.isArray(searchParams.type) &&
-      searchParams.type.length === 1 &&
-      Number(searchParams.type[0]) === LOG_TYPE_ENUM.BILLING) ||
-    Number(searchParams.type) === LOG_TYPE_ENUM.BILLING
+  const { sensitiveVisible } = useUsageLogsContext()
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['usage-logs-stats', isAdmin, searchParams, timeRangeKey],
+    queryKey: ['usage-logs-stats', isAdmin, searchParams],
     queryFn: async () => {
       const params = buildApiParams({
         page: 1,
         pageSize: 1,
         searchParams,
-        timeRange,
         columnFilters: [],
         isAdmin,
       })
@@ -103,21 +88,6 @@ export function CommonLogsStats() {
 
   return (
     <div className='flex flex-wrap items-center gap-2'>
-      {isBilling ? (
-        <>
-          <StatBadge
-            label={t('Revenue')}
-            value={sensitiveVisible ? (stats?.amount || 0).toFixed(2) : '鈥⑩€⑩€⑩€?'}
-            accent='bg-emerald-500/70'
-          />
-          <StatBadge
-            label={t('Orders')}
-            value={stats?.order_count || 0}
-            accent='bg-sky-500/70'
-          />
-        </>
-      ) : (
-        <>
       <StatBadge
         label={t('Usage')}
         value={sensitiveVisible ? formatLogQuota(stats?.quota || 0) : '••••'}
@@ -133,8 +103,6 @@ export function CommonLogsStats() {
         value={stats?.tpm || 0}
         accent='bg-slate-400/70'
       />
-        </>
-      )}
     </div>
   )
 }
