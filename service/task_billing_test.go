@@ -498,7 +498,7 @@ func TestTaskBillingOtherSeparatesPluginAndRootDiagnostics(t *testing.T) {
 func TestTaskBillingOtherMarksSubscriptionFunding(t *testing.T) {
 	task := makeTask(1, 1, 100, 0, BillingSourceSubscription, 42)
 
-	other := taskBillingOther(task)
+	other := taskBillingOther(task).Snapshot()
 
 	assert.Equal(t, BillingSourceSubscription, other["billing_source"])
 	assert.Equal(t, 42, other["subscription_id"])

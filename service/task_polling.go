@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -643,6 +644,69 @@ func finalizeTerminalTask(ctx context.Context, adaptor TaskPollingAdaptor, task 
 	if task.Status == model.TaskStatusFailure && !billingSettled && task.Quota != 0 {
 		RefundTaskQuota(ctx, task, task.FailReason)
 	}
+}
+
+func normalizeVideoPollingResult(body []byte, taskResult *relaycommon.TaskInfo) (*relaycommon.TaskInfo, bool) {
+	var response map[string]any
+	if err := common.Unmarshal(body, &response); err != nil {
+		return taskResult, false
+	}
+
+	statusValue, _ := response["status"].(string)
+	status := strings.ToLower(strings.TrimSpace(statusValue))
+	progress := 0
+	switch value := response["progress"].(type) {
+	case float64:
+		progress = int(value)
+	case string:
+		progress, _ = strconv.Atoi(strings.TrimSpace(strings.TrimSuffix(value, "%")))
+	}
+
+	resultURL := ""
+	metadata, _ := response["metadata"].(map[string]any)
+	for _, key := range []string{"url", "video_url"} {
+		if value, ok := metadata[key].(string); ok && strings.TrimSpace(value) != "" {
+			resultURL = strings.TrimSpace(value)
+			break
+		}
+	}
+
+	if status == "" && progress < 100 && resultURL == "" {
+		return taskResult, false
+	}
+	if taskResult == nil {
+		taskResult = &relaycommon.TaskInfo{}
+	}
+	if resultURL != "" {
+		taskResult.Url = resultURL
+	}
+
+	switch {
+	case progress >= 100 || resultURL != "", status == "completed" || status == "succeeded" || status == "success":
+		taskResult.Status = model.TaskStatusSuccess
+	case status == "failed" || status == "error" || status == "canceled" || status == "cancelled" || status == "rejected" || status == "expired":
+		taskResult.Status = model.TaskStatusFailure
+		if taskResult.Reason == "" {
+			switch errorValue := response["error"].(type) {
+			case string:
+				taskResult.Reason = errorValue
+			case map[string]any:
+				taskResult.Reason, _ = errorValue["message"].(string)
+			}
+		}
+		if taskResult.Reason == "" {
+			taskResult.Reason = "task " + status
+		}
+	case status == "queued" || status == "pending":
+		taskResult.Status = model.TaskStatusQueued
+	default:
+		taskResult.Status = model.TaskStatusInProgress
+	}
+
+	if progress > 0 && progress < 100 {
+		taskResult.Progress = fmt.Sprintf("%d%%", progress)
+	}
+	return taskResult, true
 }
 
 func redactVideoResponseBody(body []byte) []byte {
