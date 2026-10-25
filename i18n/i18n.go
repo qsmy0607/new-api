@@ -170,6 +170,11 @@ func StatedLang(c *gin.Context) string {
 		}
 	}
 
+	// Background jobs and unit tests may use a Gin context without an HTTP request.
+	if c.Request == nil {
+		return ""
+	}
+
 	// 4. Try Accept-Language header directly (fallback if middleware didn't run)
 	return ParseAcceptLanguage(c.GetHeader("Accept-Language"))
 }
