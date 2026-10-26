@@ -30,7 +30,6 @@ import {
   screen,
   waitFor,
   within,
-  fireEvent,
   cleanup,
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -124,24 +123,26 @@ afterEach(async () => {
   await i18next.changeLanguage('en')
 })
 
-it('applies the selected mobile date range directly and resets pagination while retaining filters', async () => {
+it('applies a custom quick range directly and resets pagination while retaining filters', async () => {
   const router = await renderMobileFilter()
   const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { name: /^\d{4}-\d{2}/ }))
-  fireEvent.change(screen.getByLabelText('Start Time'), {
-    target: { value: '2026-09-07T09:30' },
-  })
-  fireEvent.change(screen.getByLabelText('End Time'), {
-    target: { value: '2026-09-08T17:45' },
-  })
-  await user.click(screen.getByRole('button', { name: 'Confirm' }))
+  const now = new Date()
+  const start = new Date(now)
+  start.setDate(start.getDate() - 1)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(start)
+  end.setHours(23, 59, 59, 999)
+  await user.click(
+    screen.getByRole('button', { name: 'Start Time: Select date' })
+  )
+  await user.click(screen.getByRole('button', { name: 'Yesterday' }))
   await waitFor(() =>
     expect(router.state.location.search).toMatchObject({
       page: 1,
       group: 'default',
       type: ['2'],
-      startTime: new Date('2026-09-07T09:30').getTime(),
-      endTime: new Date('2026-09-08T17:45').getTime(),
+      startTime: start.getTime(),
+      endTime: end.getTime(),
     })
   )
 })
@@ -255,17 +256,14 @@ it('places the end action between Search and View on desktop', () => {
 it('collapses only date and statistics while keeping the right-hand quick actions visible', async () => {
   await renderMobileFilter()
   const user = userEvent.setup()
-  const date =
-    screen
-      .getByRole('button', { name: /^\d{4}-\d{2}/ })
-      .getAttribute('aria-label') ?? ''
+  const date = screen.getByRole('group', { name: 'Date Range' })
   expect(await screen.findByText('Usage')).toBeVisible()
   await user.click(screen.getByRole('button', { name: 'Collapse' }))
   expect(screen.getByRole('button', { name: 'Expand' })).toHaveAttribute(
     'aria-expanded',
     'false'
   )
-  expect(screen.queryByRole('button', { name: date })).not.toBeInTheDocument()
+  expect(date).not.toBeInTheDocument()
   expect(screen.queryByText('Usage')).not.toBeInTheDocument()
   const actions = screen.getByRole('group', { name: 'Actions' })
   for (const name of ['Hide', 'Filter', 'Search', 'Export', 'View']) {
@@ -279,7 +277,7 @@ it('collapses only date and statistics while keeping the right-hand quick action
     'aria-expanded',
     'true'
   )
-  expect(screen.getByRole('button', { name: date })).toBeVisible()
+  expect(screen.getByRole('group', { name: 'Date Range' })).toBeVisible()
   expect(await screen.findByText('Usage')).toBeVisible()
 })
 

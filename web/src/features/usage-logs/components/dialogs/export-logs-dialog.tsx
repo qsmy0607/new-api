@@ -36,7 +36,7 @@ import {
   toCsvLine,
 } from '../../lib/export'
 import { buildApiParams, getDefaultTimeRange } from '../../lib/utils'
-import { CompactDateTimeRangePicker } from '../compact-date-time-range-picker'
+import { CustomDateTimeRangePicker } from '../custom-date-time-range-picker'
 import { useLogsViewScope } from '../usage-logs-provider'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
@@ -174,7 +174,7 @@ export function ExportLogsDialog() {
       }
     >
       <div className='space-y-2'>
-        <CompactDateTimeRangePicker
+        <CustomDateTimeRangePicker
           start={range.start}
           end={range.end}
           onChange={setRange}

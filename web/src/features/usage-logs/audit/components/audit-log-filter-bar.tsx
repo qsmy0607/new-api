@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Combobox } from '@/components/ui/combobox'
 
-import { CompactDateTimeRangePicker } from '../../components/compact-date-time-range-picker'
+import { CustomDateTimeRangePicker } from '../../components/custom-date-time-range-picker'
 import {
   LogsFilterField,
   LogsFilterInput,
@@ -67,7 +67,7 @@ export function AuditLogFilterBar(props: {
   const { t } = useTranslation()
   const dateFilter = (
     <LogsFilterField wide>
-      <CompactDateTimeRangePicker
+      <CustomDateTimeRangePicker
         start={
           props.filters.start_timestamp === undefined
             ? undefined
