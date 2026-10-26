@@ -36,7 +36,9 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import { api } from '@/lib/api'
+import { ROLE } from '@/lib/roles'
 import { Route as UsageLogsRoute } from '@/routes/_authenticated/usage-logs/$section'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { CommonLogsFilterBar } from '../common-logs-filter-bar'
 import { UsageLogsProvider } from '../usage-logs-provider'
@@ -55,12 +57,12 @@ function FilterFixture() {
 }
 
 async function renderFilter(initialEntry = '/usage-logs/common') {
-  vi.spyOn(api, 'get').mockImplementation(async (url) => ({
-    data: {
-      success: true,
-      data: url === '/api/user/self/groups' ? {} : { quota: 0, rpm: 0, tpm: 0 },
-    },
-  }))
+  vi.spyOn(api, 'get').mockImplementation(async (url) => {
+    let data: unknown = { quota: 0, rpm: 0, tpm: 0 }
+    if (url === '/api/group/') data = []
+    if (url === '/api/user/self/groups') data = {}
+    return { data: { success: true, data } }
+  })
   const root = createRootRoute()
   const auth = createRoute({ getParentRoute: () => root, id: '_authenticated' })
   const logs = createRoute({
@@ -88,6 +90,7 @@ async function renderFilter(initialEntry = '/usage-logs/common') {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  useAuthStore.setState(useAuthStore.getInitialState(), true)
 })
 
 it('preserves custom subscription and billing log types in route search', async () => {
@@ -100,6 +103,23 @@ it('preserves custom subscription and billing log types in route search', async 
     search: { type: ['8'] },
   })
   expect(router.state.location.search).toMatchObject({ type: ['8'] })
+})
+
+it('submits the billing selection as type 9 for administrators', async () => {
+  useAuthStore.getState().auth.setUser({
+    id: 1,
+    username: 'admin',
+    role: ROLE.ADMIN,
+  })
+  const router = await renderFilter()
+
+  await userEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+  await userEvent.click(screen.getByRole('option', { name: 'Payment Billing' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Search' }))
+
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({ type: ['9'], page: 1 })
+  )
 })
 
 it('hides admin-only types and keeps retired login logs selectable', async () => {
