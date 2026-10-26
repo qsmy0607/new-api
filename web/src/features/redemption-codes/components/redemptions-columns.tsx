@@ -31,12 +31,18 @@ import {
 import { formatQuota, formatTimestampToDate } from '@/lib/format'
 
 import { REDEMPTION_FILTER_EXPIRED, REDEMPTION_STATUSES } from '../constants'
-import { isRedemptionExpired, isTimestampExpired } from '../lib'
+import {
+  formatRedemptionCopyText,
+  isRedemptionExpired,
+  isTimestampExpired,
+} from '../lib'
 import type { Redemption } from '../types'
 import { DataTableRowActions } from './data-table-row-actions'
+import { useRedemptions } from './redemptions-provider'
 
 export function useRedemptionsColumns(): ColumnDef<Redemption>[] {
   const { t } = useTranslation()
+  const { redemptionCopyTemplate } = useRedemptions()
   return [
     {
       id: 'select',
@@ -146,6 +152,7 @@ export function useRedemptionsColumns(): ColumnDef<Redemption>[] {
             label={t('Full Code')}
             fullValue={key}
             maskedValue={maskedKey}
+            copyValue={formatRedemptionCopyText(redemptionCopyTemplate, key)}
             copyTooltip={t('Copy code')}
             copyAriaLabel={t('Copy redemption code')}
           />
@@ -233,7 +240,7 @@ export function useRedemptionsColumns(): ColumnDef<Redemption>[] {
                   className='cursor-help'
                 />
               }
-            ></TooltipTrigger>
+            />
             <TooltipContent>
               <div className='space-y-1 text-xs'>
                 <div>

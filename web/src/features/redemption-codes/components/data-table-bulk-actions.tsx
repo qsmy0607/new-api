@@ -36,6 +36,7 @@ import { handleServerError } from '@/lib/handle-server-error'
 import { createServerError } from '@/lib/server-error-message'
 
 import { batchDeleteRedemptions } from '../api'
+import { formatRedemptionsCopyText } from '../lib'
 import type { Redemption } from '../types'
 import { useRedemptions } from './redemptions-provider'
 
@@ -45,17 +46,14 @@ type DataTableBulkActionsProps = {
 
 export function DataTableBulkActions(props: DataTableBulkActionsProps) {
   const { t } = useTranslation()
-  const { triggerRefresh } = useRedemptions()
+  const { triggerRefresh, redemptionCopyTemplate } = useRedemptions()
   const [deleteTargets, setDeleteTargets] = useState<Redemption[] | null>(null)
   const selectedRows = props.table.getFilteredSelectedRowModel().rows
 
   const contentToCopy = useMemo(() => {
-    const selectedCodes = selectedRows.map((row) => {
-      const redemption = row.original
-      return `${redemption.name}\t${redemption.key}`
-    })
-    return selectedCodes.join('\n')
-  }, [selectedRows])
+    const selectedCodes = selectedRows.map((row) => row.original.key)
+    return formatRedemptionsCopyText(redemptionCopyTemplate, selectedCodes)
+  }, [redemptionCopyTemplate, selectedRows])
 
   const deletion = useMutation({
     mutationFn: async (targets: Redemption[]) => {
