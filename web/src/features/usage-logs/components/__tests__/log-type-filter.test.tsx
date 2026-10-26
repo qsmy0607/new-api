@@ -36,6 +36,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import { api } from '@/lib/api'
+import { Route as UsageLogsRoute } from '@/routes/_authenticated/usage-logs/$section'
 
 import { CommonLogsFilterBar } from '../common-logs-filter-bar'
 import { UsageLogsProvider } from '../usage-logs-provider'
@@ -53,7 +54,7 @@ function FilterFixture() {
   )
 }
 
-async function renderFilter() {
+async function renderFilter(initialEntry = '/usage-logs/common') {
   vi.spyOn(api, 'get').mockImplementation(async (url) => ({
     data: {
       success: true,
@@ -66,11 +67,11 @@ async function renderFilter() {
     getParentRoute: () => auth,
     path: '/usage-logs/$section',
     component: FilterFixture,
-    validateSearch: (search: Record<string, unknown>) => search,
+    validateSearch: UsageLogsRoute.options.validateSearch,
   })
   const router = createRouter({
     routeTree: root.addChildren([auth.addChildren([logs])]),
-    history: createMemoryHistory({ initialEntries: ['/usage-logs/common'] }),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
   })
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -87,6 +88,18 @@ async function renderFilter() {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+})
+
+it('preserves custom subscription and billing log types in route search', async () => {
+  const router = await renderFilter('/usage-logs/common?type=%5B%229%22%5D')
+  expect(router.state.location.search).toMatchObject({ type: ['9'] })
+
+  await router.navigate({
+    to: '/usage-logs/$section',
+    params: { section: 'common' },
+    search: { type: ['8'] },
+  })
+  expect(router.state.location.search).toMatchObject({ type: ['8'] })
 })
 
 it('hides admin-only types and keeps retired login logs selectable', async () => {
