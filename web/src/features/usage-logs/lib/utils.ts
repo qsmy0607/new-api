@@ -28,6 +28,7 @@ import {
   getUserTaskLogs,
 } from '../api'
 import {
+  ADMIN_ONLY_LOG_TYPES,
   LOG_TYPES,
   DISPLAYABLE_LOG_TYPES,
   TIMING_LOG_TYPES,
@@ -254,6 +255,21 @@ export async function fetchLogsByCategory(
       columnFilters,
       isAdmin,
     })
+    if (
+      !isAdmin &&
+      params.type != null &&
+      (ADMIN_ONLY_LOG_TYPES as readonly number[]).includes(params.type)
+    ) {
+      return {
+        success: true,
+        data: {
+          items: [],
+          total: 0,
+          page,
+          page_size: pageSize,
+        },
+      }
+    }
     return isAdmin ? await getAllLogs(params) : await getUserLogs(params)
   }
 

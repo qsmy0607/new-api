@@ -53,7 +53,7 @@ import { formatLogQuota, formatTimestampToDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
-import { LOG_TYPE_ALL_VALUE } from '../../constants'
+import { LOG_TYPE_ALL_VALUE, LOG_TYPE_ENUM } from '../../constants'
 import type { UsageLog } from '../../data/schema'
 import {
   formatModelName,
@@ -137,6 +137,33 @@ function buildTypeDetailSegments(
   language: string,
   usageSchema?: BillingUsageSchema
 ): DetailSegment[] {
+  if (log.type === LOG_TYPE_ENUM.BILLING) {
+    const amount =
+      typeof log.payment_amount === 'number' &&
+      Number.isFinite(log.payment_amount)
+        ? log.payment_amount.toFixed(6)
+        : '-'
+    const billingType =
+      log.billing_type === 'subscription'
+        ? t('Subscription Payment')
+        : t('Quota Top-up')
+    return [
+      { text: `${t('Payment Amount')}: ${amount}` },
+      { text: `${t('Billing Type')}: ${billingType}`, muted: true },
+      ...(log.payment_provider
+        ? [
+            {
+              text: `${t('Payment Provider')}: ${log.payment_provider}`,
+              muted: true,
+            },
+          ]
+        : []),
+      ...(log.trade_no
+        ? [{ text: `${t('Trade No')}: ${log.trade_no}`, muted: true }]
+        : []),
+    ]
+  }
+
   // Top-up, audit, and login logs can carry a localized operation descriptor.
   if (log.type === 1 || log.type === 3 || log.type === 7) {
     const text = renderAuditContent(other, t) ?? renderLogContent(other, t)
@@ -729,6 +756,20 @@ export function useCommonLogsColumns(
         header: t('Tokens', { context: 'usage' }),
         cell: ({ row }) => {
           const log = row.original
+          if (log.type === LOG_TYPE_ENUM.BILLING) {
+            const amount = log.payment_amount
+            if (typeof amount !== 'number' || !Number.isFinite(amount)) {
+              return null
+            }
+            return (
+              <span className='border-border/80 bg-muted/60 inline-flex h-6 w-fit items-center rounded-md border px-2 text-sm leading-none font-semibold tabular-nums'>
+                {amount.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 6,
+                })}
+              </span>
+            )
+          }
           if (!isDisplayableLogType(log.type)) return null
 
           const other = parseLogOther(log.other)

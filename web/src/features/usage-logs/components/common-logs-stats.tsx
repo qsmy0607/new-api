@@ -26,7 +26,7 @@ import { requireServerSuccess } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 
 import { getLogStats, getUserLogStats } from '../api'
-import { DEFAULT_LOG_STATS } from '../constants'
+import { DEFAULT_LOG_STATS, LOG_TYPE_ENUM } from '../constants'
 import { buildApiParams } from '../lib/utils'
 import { useLogsViewScope, useUsageLogsContext } from './usage-logs-provider'
 
@@ -53,6 +53,10 @@ export function CommonLogsStats() {
   const { isAdminView: isAdmin } = useLogsViewScope()
   const searchParams = route.useSearch()
   const { sensitiveVisible } = useUsageLogsContext()
+  const isBilling =
+    Array.isArray(searchParams.type) &&
+    searchParams.type.length === 1 &&
+    Number(searchParams.type[0]) === LOG_TYPE_ENUM.BILLING
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['usage-logs-stats', isAdmin, searchParams],
@@ -82,6 +86,23 @@ export function CommonLogsStats() {
         <Skeleton className='h-7 w-[150px] rounded-md' />
         <Skeleton className='h-7 w-[100px] rounded-md' />
         <Skeleton className='h-7 w-[120px] rounded-md' />
+      </div>
+    )
+  }
+
+  if (isBilling) {
+    return (
+      <div className='flex flex-wrap items-center gap-2'>
+        <StatBadge
+          label={t('Revenue')}
+          value={sensitiveVisible ? (stats?.amount || 0).toFixed(2) : '****'}
+          accent='bg-emerald-500/70'
+        />
+        <StatBadge
+          label={t('Orders')}
+          value={stats?.order_count || 0}
+          accent='bg-sky-500/70'
+        />
       </div>
     )
   }

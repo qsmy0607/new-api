@@ -89,16 +89,20 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-it('marks only retired log types as deprecated while keeping historical filters selectable', async () => {
+it('hides admin-only types and keeps retired login logs selectable', async () => {
   const router = await renderFilter()
   await userEvent.click(screen.getByRole('combobox', { name: 'Type' }))
-  for (const label of ['Manage', 'Login']) {
-    expect(
-      within(
-        screen.getByRole('option', { name: new RegExp(`^${label}`) })
-      ).getByText('Deprecated')
-    ).toBeVisible()
-  }
+  expect(
+    screen.queryByRole('option', { name: /^Manage/ })
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('option', { name: 'Payment Billing' })
+  ).not.toBeInTheDocument()
+  expect(
+    within(screen.getByRole('option', { name: /^Login/ })).getByText(
+      'Deprecated'
+    )
+  ).toBeVisible()
   for (const label of [
     'All Types',
     'Top-up',
@@ -113,15 +117,6 @@ it('marks only retired log types as deprecated while keeping historical filters 
       )
     ).not.toBeInTheDocument()
   }
-  await userEvent.click(screen.getByRole('option', { name: /^Manage/ }))
-  expect(screen.getByRole('combobox', { name: 'Type' })).toHaveTextContent(
-    'Deprecated'
-  )
-  await userEvent.click(screen.getByRole('button', { name: 'Search' }))
-  await waitFor(() =>
-    expect(router.state.location.search).toMatchObject({ type: ['3'], page: 1 })
-  )
-  await userEvent.click(screen.getByRole('combobox', { name: 'Type' }))
   await userEvent.click(screen.getByRole('option', { name: /^Login/ }))
   await userEvent.click(screen.getByRole('button', { name: 'Search' }))
   await waitFor(() =>

@@ -42,9 +42,15 @@ import {
 import { getGroups } from '@/features/users/api'
 import { useMediaQuery } from '@/hooks'
 import { getUserGroups } from '@/lib/api'
+import { ROLE } from '@/lib/roles'
 import { requireServerSuccess } from '@/lib/server-error-message'
+import { useAuthStore } from '@/stores/auth-store'
 
-import { LOG_TYPE_ALL_VALUE, LOG_TYPE_FILTERS } from '../constants'
+import {
+  ADMIN_ONLY_LOG_TYPES,
+  LOG_TYPE_ALL_VALUE,
+  LOG_TYPE_FILTERS,
+} from '../constants'
 import { buildSearchParams } from '../lib/filter'
 import { getDefaultTimeRange } from '../lib/utils'
 import type { CommonLogFilters } from '../types'
@@ -125,6 +131,8 @@ export function CommonLogsFilterBar<TData>(
   const queryClient = useQueryClient()
   const searchParams = route.useSearch()
   const { isAdminView: isAdmin } = useLogsViewScope()
+  const userRole = useAuthStore((state) => state.auth.user?.role ?? ROLE.GUEST)
+  const canViewAdminLogTypes = userRole >= ROLE.ADMIN
   const { sensitiveVisible, setSensitiveVisible } = useUsageLogsContext()
   const fetchingLogs = useIsFetching({ queryKey: ['logs'] })
   const { data: adminGroups } = useQuery({
@@ -285,12 +293,18 @@ export function CommonLogsFilterBar<TData>(
     : '[-webkit-text-security:disc]'
   const logTypeItems = useMemo(
     () =>
-      LOG_TYPE_FILTERS.map((type) => ({
+      LOG_TYPE_FILTERS.filter(
+        (type) =>
+          canViewAdminLogTypes ||
+          !(ADMIN_ONLY_LOG_TYPES as readonly number[]).includes(
+            Number(type.value)
+          )
+      ).map((type) => ({
         value: type.value,
         label: t(type.label),
         deprecated: type.deprecated,
       })),
-    [t]
+    [canViewAdminLogTypes, t]
   )
   const selectedLogType = logTypeItems.find((type) => type.value === logType)
   const deprecatedTypeDescription = t(
@@ -407,7 +421,7 @@ export function CommonLogsFilterBar<TData>(
           className='max-w-[calc(100vw-2rem)] min-w-52'
         >
           <SelectGroup>
-            {LOG_TYPE_FILTERS.map((type) => (
+            {logTypeItems.map((type) => (
               <SelectItem
                 key={type.value}
                 value={type.value}
