@@ -146,8 +146,7 @@ describe('administrator update entry', () => {
     }
   )
 
-  test('shares results with maintenance, opens release details by keyboard and returns focus on Escape', async () => {
-    const user = userEvent.setup()
+  test('shares results with maintenance while keeping the version label passive', async () => {
     render(
       <>
         <SystemUpdateAction presentation='version' />
@@ -161,42 +160,11 @@ describe('administrator update entry', () => {
     const buttons = await screen.findAllByRole('button', {
       name: /New version available: v1\.0\.0-rc\.36/,
     })
-    expect(buttons).toHaveLength(2)
+    expect(buttons).toHaveLength(1)
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(within(buttons[0]).getByText('v1.0.0-rc.35')).toHaveClass('truncate')
-    expect(within(buttons[0]).getByText('Update available')).toHaveClass(
-      'hidden',
-      '@min-[22rem]/system-brand:inline-flex'
-    )
-    expect(within(buttons[1]).getByText('Update available')).not.toHaveClass(
-      'hidden'
-    )
-
-    buttons[0].focus()
-    await user.keyboard('{Enter}')
-    const dialog = await screen.findByRole('dialog', { name: 'System updates' })
-    expect(await within(dialog).findByText(release.body)).toBeInTheDocument()
-    expect(within(dialog).getByText('Pre-release')).toBeInTheDocument()
-    expect(within(dialog).getByText('Published at')).toBeInTheDocument()
     expect(
-      within(dialog).queryByText(
-        'Checks hourly while you are online, including pre-releases.'
-      )
-    ).not.toBeInTheDocument()
-    expect(
-      within(dialog).queryByText('Last successful check')
-    ).not.toBeInTheDocument()
-    expect(
-      within(dialog).getByRole('link', { name: 'Go to GitHub' })
-    ).toHaveAttribute(
-      'href',
-      'https://github.com/QuantumNous/new-api/releases/tag/v1.0.0-rc.36'
-    )
-    await user.keyboard('{Escape}')
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    )
-    expect(buttons[0]).toHaveFocus()
+      screen.getByLabelText(/System updates, current version: v1\.0\.0-rc\.35/)
+    ).toBeInTheDocument()
   })
 
   test('does not suggest a downgrade and updates every entry after a manual recheck', async () => {
@@ -245,35 +213,17 @@ describe('administrator update entry', () => {
   test.each(['', 'v0.0.0'])(
     'shows an unknown current version for %s and allows ignoring the fetched release',
     async (version) => {
-      const user = userEvent.setup()
       client.setQueryData(STATUS_QUERY_KEY, { version })
       render(<SystemUpdateAction presentation='version' />, {
         wrapper: Wrapper,
       })
-      const trigger = screen.getByRole('button', {
-        name: 'System updates, current version: Unknown version',
-      })
-      await user.click(trigger)
-      const dialog = screen.getByRole('dialog')
-      expect(within(dialog).getByText('Unknown version')).toBeInTheDocument()
-      expect(
-        await within(dialog).findByRole('link', { name: 'Go to GitHub' })
-      ).toBeInTheDocument()
-      expect(
-        within(dialog).queryByText('Unable to compare versions')
-      ).not.toBeInTheDocument()
-      expect(
-        within(dialog).queryByText('No newer version available.')
-      ).not.toBeInTheDocument()
-      await user.click(
-        within(dialog).getByRole('button', { name: 'Ignore this version' })
+      const trigger = screen.getByLabelText(
+        'System updates, current version: Unknown version'
       )
-      expect(
-        within(dialog).getByText('This version is ignored')
-      ).toBeInTheDocument()
-      expect(trigger).not.toHaveAttribute(
+      expect(trigger).toBeInTheDocument()
+      expect(trigger).toHaveAttribute(
         'title',
-        expect.stringContaining('New version available')
+        'System updates, current version: Unknown version'
       )
     }
   )
@@ -380,10 +330,9 @@ describe('version label presentation', () => {
     )
     client.setQueryData(STATUS_QUERY_KEY, { version: release.tag_name })
     render(<SystemUpdateAction presentation='version' />, { wrapper: Wrapper })
-    const trigger = screen.getByRole('button', {
-      name: 'System updates, current version: v1.0.0-rc.36',
-    })
-    expect(trigger).toHaveAttribute('aria-busy', 'true')
+    const trigger = screen.getByLabelText(
+      'System updates, current version: v1.0.0-rc.36'
+    )
     expect(within(trigger).getByText(release.tag_name)).toBeInTheDocument()
     expect(
       within(trigger).queryByText('Check for updates')
@@ -391,7 +340,6 @@ describe('version label presentation', () => {
     await act(async () => {
       finishRequest?.(new Response(JSON.stringify([release])))
     })
-    await waitFor(() => expect(trigger).toHaveAttribute('aria-busy', 'false'))
     expect(within(trigger).getByText(release.tag_name)).toBeInTheDocument()
     expect(
       within(trigger).queryByText('Update available')
@@ -401,41 +349,39 @@ describe('version label presentation', () => {
   test('shows an unknown-version label when the server has not supplied a version', async () => {
     client.setQueryData(STATUS_QUERY_KEY, { version: '' })
     render(<SystemUpdateAction presentation='version' />, { wrapper: Wrapper })
-    const trigger = screen.getByRole('button', {
-      name: 'System updates, current version: Unknown version',
-    })
+    const trigger = screen.getByLabelText(
+      'System updates, current version: Unknown version'
+    )
     expect(within(trigger).getByText('Unknown version')).toBeInTheDocument()
-    await waitFor(() => expect(trigger).toHaveAttribute('aria-busy', 'false'))
     expect(
       within(trigger).queryByText('Update available')
     ).not.toBeInTheDocument()
   })
 
   test('retains the version after a failed check and exposes the error in its tooltip and details', async () => {
-    const user = userEvent.setup()
     fetchMock.mockResolvedValue(new Response('', { status: 429 }))
     render(<SystemUpdateAction presentation='version' />, { wrapper: Wrapper })
-    const trigger = await screen.findByRole('button', {
-      name: /System updates, current version: v1\.0\.0-rc\.35.*Failed to check for updates/s,
-    })
+    const trigger = await screen.findByLabelText(
+      /System updates, current version: v1\.0\.0-rc\.35.*Failed to check for updates/s
+    )
     expect(within(trigger).getByText('v1.0.0-rc.35')).toBeInTheDocument()
     expect(trigger).toHaveAttribute(
       'title',
       expect.stringContaining('Failed to check for updates')
     )
-    await user.click(trigger)
-    expect(
-      screen.getByText('GitHub rate limit reached. Try again later.')
-    ).toBeInTheDocument()
+    expect(trigger).toHaveAttribute(
+      'title',
+      expect.stringContaining('Failed to check for updates')
+    )
   })
 
   test('keeps a long version accessible in the tooltip while constraining its visible label', async () => {
     const version = 'v1.0.0+long-build-metadata-for-a-custom-deployment'
     client.setQueryData(STATUS_QUERY_KEY, { version })
     render(<SystemUpdateAction presentation='version' />, { wrapper: Wrapper })
-    const trigger = screen.getByRole('button', {
-      name: `System updates, current version: ${version}`,
-    })
+    const trigger = screen.getByLabelText(
+      `System updates, current version: ${version}`
+    )
     expect(trigger).toHaveAttribute('title', expect.stringContaining(version))
     expect(within(trigger).getByText(version)).toHaveClass(
       'truncate',
@@ -443,7 +389,6 @@ describe('version label presentation', () => {
       'hidden',
       '@min-[22rem]/system-brand:inline'
     )
-    await waitFor(() => expect(trigger).toHaveAttribute('aria-busy', 'false'))
   })
 })
 

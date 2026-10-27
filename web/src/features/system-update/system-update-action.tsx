@@ -119,6 +119,21 @@ function AdminSystemUpdateAction(props: SystemUpdateActionProps) {
     )
   }
 
+  if (versionPresentation) {
+    return (
+      <span
+        title={description}
+        aria-label={description}
+        className='text-muted-foreground inline-flex h-7 max-w-40 items-center gap-1.5 px-1.5 text-xs'
+      >
+        {triggerContent}
+        <span className='sr-only' role='status' aria-live='polite'>
+          {updateAnnouncement}
+        </span>
+      </span>
+    )
+  }
+
   return (
     <SystemUpdateDialog
       open={open}
