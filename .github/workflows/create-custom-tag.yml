@@ -81,13 +81,23 @@ jobs:
             exit 1
           fi
           prefix="$custom_base-custom."
+          legacy_prefix="$OFFICIAL_TAG-custom."
           latest=0
           while IFS= read -r tag; do
-            suffix=${tag#"$prefix"}
+            if [[ "$tag" == "$prefix"* ]]; then
+              suffix=${tag#"$prefix"}
+            else
+              suffix=${tag#"$legacy_prefix"}
+            fi
             if [[ "$suffix" =~ ^[0-9]+$ ]] && ((10#$suffix > latest)); then
               latest=$((10#$suffix))
             fi
-          done < <(git tag --list "$prefix*")
+          done < <(
+            {
+              git tag --list "$prefix*"
+              git tag --list "$legacy_prefix*"
+            } | sort -u
+          )
 
           next=$((latest + 1))
           custom_tag="$prefix$next"
