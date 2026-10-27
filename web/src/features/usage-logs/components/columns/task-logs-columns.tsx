@@ -22,6 +22,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 /* eslint-disable react-refresh/only-export-components */
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 
 import { StatusBadge } from '@/components/status-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -131,6 +132,7 @@ export function useTaskLogsColumns(
             } = useUsageLogsContext()
             const log = row.original
             const displayName = log.username || String(log.user_id || '?')
+            const { copyToClipboard } = useCopyToClipboard()
 
             return (
               <button
@@ -138,8 +140,7 @@ export function useTaskLogsColumns(
                 className='flex items-center gap-1.5 text-left'
                 onClick={(e) => {
                   e.stopPropagation()
-                  setSelectedUserId(log.user_id)
-                  setUserInfoDialogOpen(true)
+                  if (sensitiveVisible) void copyToClipboard(displayName)
                 }}
               >
                 <Avatar className='ring-border/60 size-6 ring-1 max-sm:hidden'>
@@ -159,7 +160,7 @@ export function useTaskLogsColumns(
                       : '•'}
                   </AvatarFallback>
                 </Avatar>
-                <span className='text-muted-foreground truncate text-sm hover:underline'>
+                <span className='text-muted-foreground truncate text-sm hover:underline' onClick={(e) => { e.stopPropagation(); setSelectedUserId(log.user_id); setUserInfoDialogOpen(true) }}>
                   {sensitiveVisible ? displayName : '••••'}
                 </span>
               </button>

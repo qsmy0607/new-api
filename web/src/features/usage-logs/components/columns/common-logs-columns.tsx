@@ -52,6 +52,7 @@ import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import { formatLogQuota, formatTimestampToDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useSystemConfigStore } from '@/stores/system-config-store'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 
 import { LOG_TYPE_ALL_VALUE, LOG_TYPE_ENUM } from '../../constants'
 import type { UsageLog } from '../../data/schema'
@@ -590,6 +591,7 @@ export function useCommonLogsColumns(
               setUserInfoDialogOpen,
             } = useUsageLogsContext()
             const log = row.original
+            const { copyToClipboard } = useCopyToClipboard()
 
             if (!log.username) return null
 
@@ -599,8 +601,7 @@ export function useCommonLogsColumns(
                 className='flex items-center gap-1.5 text-left'
                 onClick={(e) => {
                   e.stopPropagation()
-                  setSelectedUserId(log.user_id)
-                  setUserInfoDialogOpen(true)
+                  if (sensitiveVisible && log.username) void copyToClipboard(log.username)
                 }}
               >
                 <Avatar className='ring-border/60 size-6 ring-1 max-sm:hidden'>
@@ -624,7 +625,14 @@ export function useCommonLogsColumns(
                   <Tooltip>
                     <TooltipTrigger
                       render={
-                        <span className='text-muted-foreground max-w-[100px] truncate text-sm hover:underline' />
+                        <span
+                          className='text-muted-foreground max-w-[100px] truncate text-sm hover:underline'
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedUserId(log.user_id)
+                            setUserInfoDialogOpen(true)
+                          }}
+                        />
                       }
                     >
                       {sensitiveVisible ? log.username : '••••'}
