@@ -333,14 +333,14 @@ describe('version label presentation', () => {
     const trigger = screen.getByLabelText(
       'System updates, current version: v1.0.0-rc.36'
     )
-    expect(within(trigger).getByText(release.tag_name)).toBeInTheDocument()
+    expect(within(trigger).getByText('rc.36')).toBeInTheDocument()
     expect(
       within(trigger).queryByText('Check for updates')
     ).not.toBeInTheDocument()
     await act(async () => {
       finishRequest?.(new Response(JSON.stringify([release])))
     })
-    expect(within(trigger).getByText(release.tag_name)).toBeInTheDocument()
+    expect(within(trigger).getByText('rc.36')).toBeInTheDocument()
     expect(
       within(trigger).queryByText('Update available')
     ).not.toBeInTheDocument()
@@ -364,7 +364,7 @@ describe('version label presentation', () => {
     const trigger = await screen.findByLabelText(
       /System updates, current version: v1\.0\.0-rc\.35.*Failed to check for updates/s
     )
-    expect(within(trigger).getByText('v1.0.0-rc.35')).toBeInTheDocument()
+    expect(within(trigger).getByText('rc.35')).toBeInTheDocument()
     expect(trigger).toHaveAttribute(
       'title',
       expect.stringContaining('Failed to check for updates')
