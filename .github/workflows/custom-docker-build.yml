@@ -19,7 +19,7 @@ on:
         type: string
 
 env:
-  IMAGE_NAME: jitongyu0607/api
+  IMAGE_NAME: jitongyu0607/new-api
 
 jobs:
   build_single_arch:
