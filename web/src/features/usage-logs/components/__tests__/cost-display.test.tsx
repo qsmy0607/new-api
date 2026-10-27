@@ -76,6 +76,12 @@ describe('log cost display', () => {
 
       expect(screen.getByText(expected)).toBeVisible()
       expect(screen.getByRole('img', { name: 'Subscription' })).toBeVisible()
+      expect(
+        screen.getByRole('img', { name: 'Subscription' }).querySelector('svg')
+      ).toHaveClass(
+        'text-green-600',
+        'dark:text-green-400'
+      )
       expect(screen.queryByText('Subscription')).not.toBeInTheDocument()
       expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
     }

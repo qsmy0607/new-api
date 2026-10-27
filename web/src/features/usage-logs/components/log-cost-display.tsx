@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { formatLogQuota } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 import { hasToolSurcharge } from '../lib/format'
 import type { LogOtherData } from '../types'
@@ -122,7 +123,12 @@ export function LogCostDisplay(props: LogCostDisplayProps) {
                   >
                     <HugeiconsIcon
                       icon={isSubscription ? CrownIcon : Wallet01Icon}
-                      className='size-3.5'
+                      className={cn(
+                        'size-3.5',
+                        isSubscription
+                          ? 'text-green-600 dark:text-green-400'
+                          : undefined
+                      )}
                       strokeWidth={2}
                       aria-hidden='true'
                     />
