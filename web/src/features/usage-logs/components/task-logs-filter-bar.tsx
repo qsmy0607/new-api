@@ -162,7 +162,12 @@ export function TaskLogsFilterBar<TData>(props: TaskLogsFilterBarProps<TData>) {
     props.logCategory === 'drawing'
       ? t('Filter by MjProxy task ID')
       : t('Filter by task ID')
-  const hasAdditionalFilters = !!filterValue || !!filters.channel
+  const defaultTimeRange = getDefaultTimeRange()
+  const hasAdditionalFilters =
+    !!filterValue ||
+    !!filters.channel ||
+    filters.startTime?.getTime() !== defaultTimeRange.start.getTime() ||
+    filters.endTime?.getTime() !== defaultTimeRange.end.getTime()
   const dateRangeFilter = (
     <LogsFilterField wide>
       <CustomDateTimeRangePicker

@@ -276,8 +276,16 @@ export function CommonLogsFilterBar<TData>(
     !!filters.upstreamRequestId
 
   const hasTypeFilter = logType !== LOG_TYPE_ALL_VALUE
+  const defaultTimeRange = getDefaultTimeRange()
+  const hasTimeFilter =
+    filters.startTime?.getTime() !== defaultTimeRange.start.getTime() ||
+    filters.endTime?.getTime() !== defaultTimeRange.end.getTime()
   const hasAdditionalFilters =
-    !!filters.model || !!filters.group || hasTypeFilter || hasExpandedFilters
+    !!filters.model ||
+    !!filters.group ||
+    hasTypeFilter ||
+    hasExpandedFilters ||
+    hasTimeFilter
 
   const expandedFilterCount = [
     filters.token,
