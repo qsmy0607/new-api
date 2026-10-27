@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*-custom.*'
+      - 'rc*-custom.*'
 
 jobs:
   build:

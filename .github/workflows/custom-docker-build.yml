@@ -4,10 +4,11 @@ on:
   push:
     tags:
       - 'v*-custom.*'
+      - 'rc*-custom.*'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing custom tag to build (for example, v1.0.0-rc.21-custom.1)'
+        description: 'Existing custom tag to build (for example, rc.46-custom.7)'
         required: true
         type: string
   workflow_call:
@@ -63,9 +64,9 @@ jobs:
           fi
 
           case "$TAG" in
-            v*-custom.*) ;;
+            v*-custom.*|rc*-custom.*) ;;
             *)
-              echo "::error::Custom release tags must match v*-custom.*"
+              echo "::error::Custom release tags must match v*-custom.* or rc*-custom.*"
               exit 1
               ;;
           esac

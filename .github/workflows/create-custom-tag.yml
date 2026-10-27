@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       official_tag:
-        description: 'Official base tag (for example, v1.0.0-rc.23)'
+        description: 'Official base tag (for example, v1.0.0-rc.46)'
         required: true
         type: string
       target_branch:
@@ -74,7 +74,13 @@ jobs:
             exit 1
           fi
 
-          prefix="$OFFICIAL_TAG-custom."
+          if [[ "$OFFICIAL_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(.+)$ ]]; then
+            custom_base="${BASH_REMATCH[1]}"
+          else
+            echo "Unable to derive custom version from official tag: $OFFICIAL_TAG" >&2
+            exit 1
+          fi
+          prefix="$custom_base-custom."
           latest=0
           while IFS= read -r tag; do
             suffix=${tag#"$prefix"}
