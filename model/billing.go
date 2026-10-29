@@ -81,7 +81,7 @@ func billingUnionSQL(userId int, startTimestamp int64, endTimestamp int64) (stri
 	}
 
 	filters := []string{}
-	if userId > 0 {
+	if userId != 0 {
 		filters = append(filters, "user_id = ?")
 		args = append(args, userId)
 	}

@@ -58,7 +58,18 @@ func GetAllLogs(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
 	filter := logFilterFromQuery(c, true)
 	if filter.Type == model.LogTypeBilling {
-		records, total, err := model.GetBillingRecords(0, filter.StartTimestamp, filter.EndTimestamp, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
+		userId := 0
+		if filter.Username != "" {
+			var user model.User
+			if err := model.DB.Select("id").Where("username = ?", filter.Username).First(&user).Error; err != nil {
+				pageInfo.SetTotal(0)
+				pageInfo.SetItems([]*model.BillingRecord{})
+				common.ApiSuccess(c, pageInfo)
+				return
+			}
+			userId = user.Id
+		}
+		records, total, err := model.GetBillingRecords(userId, filter.StartTimestamp, filter.EndTimestamp, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
 		if err != nil {
 			common.ApiError(c, err)
 			return
@@ -223,7 +234,16 @@ func GetLogsStat(c *gin.Context) {
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	if logType == model.LogTypeBilling {
-		stats, err := model.GetBillingStatistics(0, startTimestamp, endTimestamp)
+		userId := 0
+		if username := c.Query("username"); username != "" {
+			var user model.User
+			if err := model.DB.Select("id").Where("username = ?", username).First(&user).Error; err != nil {
+				common.ApiSuccess(c, gin.H{"amount": 0, "order_count": 0})
+				return
+			}
+			userId = user.Id
+		}
+		stats, err := model.GetBillingStatistics(userId, startTimestamp, endTimestamp)
 		if err != nil {
 			common.ApiError(c, err)
 			return
