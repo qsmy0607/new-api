@@ -67,7 +67,7 @@ func billingUnionSQL(userId int, startTimestamp int64, endTimestamp int64) (stri
 		       s.payment_provider AS payment_provider, s.payment_method AS payment_method, s.trade_no AS trade_no, 0 AS amount, s.status AS status
 		FROM subscription_orders s
 		LEFT JOIN users u ON u.id = s.user_id
-		WHERE s.status = ? AND s.payment_provider IN (%s) AND s.complete_time > 0`, LogTypeBilling, providers)
+		WHERE s.status = ? AND s.complete_time > 0`, LogTypeBilling)
 
 	args := make([]interface{}, 0, 20)
 	args = append(args, common.TopUpStatusSuccess)
@@ -76,9 +76,6 @@ func billingUnionSQL(userId int, startTimestamp int64, endTimestamp int64) (stri
 	}
 	args = append(args, common.TopUpStatusSuccess)
 	args = append(args, common.TopUpStatusSuccess)
-	for _, provider := range onlineBillingProviders {
-		args = append(args, provider)
-	}
 
 	filters := []string{}
 	if userId != 0 {
