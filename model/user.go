@@ -996,6 +996,15 @@ func (user *User) delete(identity *AuthSessionIdentity) (int64, error) {
 }
 
 func (user *User) HardDelete() (int64, error) {
+	return user.hardDelete(0)
+}
+
+// HardDeleteForAdmin checks the current target role under the deletion lock.
+func (user *User) HardDeleteForAdmin(operatorRole int) (int64, error) {
+	return user.hardDelete(operatorRole)
+}
+
+func (user *User) hardDelete(operatorRole int) (int64, error) {
 	if user.Id == 0 {
 		return 0, common.NewMessage("ID is empty!")
 	}
@@ -1003,6 +1012,16 @@ func (user *User) HardDelete() (int64, error) {
 	var deletedAuthVersion int64
 	var revokedAccessTokens int64
 	err := DB.Transaction(func(tx *gorm.DB) error {
+		if operatorRole > 0 {
+			var current User
+			if err := lockForUpdate(tx).Select("id", "role").Where("id = ?", user.Id).First(&current).Error; err != nil {
+				return err
+			}
+			if current.Role >= operatorRole {
+				return common.NewMessage("No permission to update users of same or higher permission level")
+			}
+		}
+
 		var err error
 		deletedAuthVersion, err = IncrementUserAuthVersionWithTx(tx, user.Id)
 		if err != nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -941,6 +942,55 @@ func UpdateSelf(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
 	return
+}
+
+// BatchDeleteUsers consumes one proof bound to the complete selected user set.
+// Existing hard-delete transactions perform credential cleanup and cache invalidation.
+func BatchDeleteUsers(c *gin.Context) {
+	var request service.AdminUsersDeleteContext
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiErrorT(c, "Invalid parameters")
+		return
+	}
+	payload, err := common.Marshal(request)
+	if err != nil {
+		common.ApiErrorT(c, "Invalid parameters")
+		return
+	}
+	if _, err := service.BindVerificationOperation(service.VerificationOperation{Scope: service.VerificationScopeAdminUsersDelete, Context: payload}); err != nil {
+		common.ApiErrorT(c, "Invalid parameters")
+		return
+	}
+	slices.Sort(request.UserIDs)
+	request.UserIDs = slices.Compact(request.UserIDs)
+	targets := make([]*model.User, 0, len(request.UserIDs))
+	for _, id := range request.UserIDs {
+		user, err := model.GetUserById(id, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		if id == c.GetInt("id") || user.Role >= c.GetInt("role") {
+			common.ApiErrorT(c, "No permission to update users of same or higher permission level")
+			return
+		}
+		targets = append(targets, user)
+	}
+	authorization := requireAdminUserProof(c, service.VerificationScopeAdminUsersDelete, request)
+	if authorization == nil {
+		return
+	}
+	deleted := make([]int, 0, len(targets))
+	for _, user := range targets {
+		revoked, err := user.HardDeleteForAdmin(c.GetInt("role"))
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "Failed to delete user", "data": gin.H{"deleted_ids": deleted}})
+			return
+		}
+		deleted = append(deleted, user.Id)
+		recordManageAuditFor(c, user.Id, "user.delete", map[string]any{"username": user.Username, "id": user.Id, "verification_method": authorization.Method, "revoked_access_tokens": revoked})
+	}
+	common.ApiSuccess(c, gin.H{"deleted_ids": deleted})
 }
 
 func DeleteUser(c *gin.Context) {

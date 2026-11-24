@@ -30,7 +30,7 @@ import { AuthOperationError } from '@/lib/secure-verification'
 import { requireServerSuccess } from '@/lib/server-error-message'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { deleteUser } from '../api'
+import { batchDeleteUsers } from '../api'
 import { isUserDeleted } from '../constants'
 import type { User } from '../types'
 import { useUsers } from './users-provider'
@@ -65,25 +65,21 @@ export function DataTableBulkActions(props: DataTableBulkActionsProps) {
     setIsDeleting(true)
     const completed = new Set<number>()
     try {
-      for (const user of targets) {
-        const proof = await requestVerification({
-          scope: 'admin.user.delete',
-          context: { user_id: user.id },
-          title: t('Verify to delete user'),
-          description: t(
-            'Confirm your identity before permanently deleting the account {{username}}.',
-            { username: user.username }
-          ),
-        })
-        if (!proof) break
-        requireServerSuccess(await deleteUser(user.id, proof.proof_token))
-        completed.add(user.id)
-        props.table.setRowSelection((previous) => {
-          const remaining = { ...previous }
-          delete remaining[String(user.id)]
-          return remaining
-        })
-      }
+      const ids = targets.map((user) => user.id)
+      const proof = await requestVerification({
+        scope: 'admin.users.delete',
+        context: { user_ids: ids },
+        title: t('Delete selected users'),
+      })
+      if (!proof) return
+      const result = await batchDeleteUsers(ids, proof.proof_token)
+      for (const id of result.data?.deleted_ids ?? []) completed.add(id)
+      props.table.setRowSelection((previous) => {
+        const remaining = { ...previous }
+        for (const id of completed) delete remaining[String(id)]
+        return remaining
+      })
+      requireServerSuccess(result)
       if (completed.size === targets.length) setTargets([])
     } catch (error) {
       handleServerError(AuthOperationError.from(error))
@@ -123,7 +119,7 @@ export function DataTableBulkActions(props: DataTableBulkActionsProps) {
           <>
             <p>
               {t(
-                'Permanently delete {{count}} selected users? Each account requires identity verification. Deletion stops if verification is cancelled or a request fails.',
+                'Permanently delete {{count}} selected users? Verify your identity once to delete the entire selection.',
                 { count: targets.length }
               )}
             </p>

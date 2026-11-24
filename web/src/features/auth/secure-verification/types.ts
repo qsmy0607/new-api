@@ -41,6 +41,7 @@ export type SecurityProofScope =
   | 'account.delete'
   | 'admin.user.create'
   | 'admin.user.update'
+  | 'admin.users.delete'
   | 'admin.user.delete'
   | 'admin.user.manage'
   | 'admin.user.passkey.reset'
@@ -51,6 +52,7 @@ export type SecurityProofScope =
 export type AdminUserManageAction = 'disable' | 'enable' | 'promote' | 'demote'
 
 export type VerificationOperation =
+  | { scope: 'admin.users.delete'; context: { user_ids: number[] } }
   | { scope: 'channel.key.read'; context: { channel_id: number } }
   | {
       scope: 'account.binding.bind'

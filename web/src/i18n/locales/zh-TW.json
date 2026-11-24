@@ -4715,6 +4715,7 @@
     "Periodically checks only channels with auto-disable enabled, excluding manually disabled channels.": "只定時檢查已啟用「自動停用」的渠道；未啟用該選項和手動停用的渠道不會被檢查。",
     "Periodically send ping frames to keep streaming connections active.": "定期發送 ping 幀以保持串流連接處於活動狀態。",
     "Permanently delete {{count}} selected users? Each account requires identity verification. Deletion stops if verification is cancelled or a request fails.": "永久刪除選取的 {{count}} 位使用者？每個帳號都需要身分驗證。取消驗證或請求失敗時將停止刪除。",
+    "Permanently delete {{count}} selected users? Verify your identity once to delete the entire selection.": "永久刪除選取的 {{count}} 位使用者？只需驗證一次身分，即可刪除全部選取的使用者。",
     "Permanently delete your account and all data": "永久刪除您的用戶和所有數據",
     "Permissions": "權限",
     "Permit Passkey registration on non-HTTPS origins (only recommended for development)": "允許在非 HTTPS 源上註冊通行金鑰（僅建議用於開發）",

@@ -4715,6 +4715,7 @@
     "Periodically checks only channels with auto-disable enabled, excluding manually disabled channels.": "Vérifie périodiquement uniquement les canaux dont la désactivation automatique est activée, en excluant les canaux désactivés manuellement.",
     "Periodically send ping frames to keep streaming connections active.": "Envoyer périodiquement des trames ping pour maintenir les connexions de streaming actives.",
     "Permanently delete {{count}} selected users? Each account requires identity verification. Deletion stops if verification is cancelled or a request fails.": "Supprimer définitivement les {{count}} utilisateurs sélectionnés ? Chaque compte nécessite une vérification d’identité. La suppression s’arrête si la vérification est annulée ou si une requête échoue.",
+    "Permanently delete {{count}} selected users? Verify your identity once to delete the entire selection.": "Supprimer définitivement les {{count}} utilisateurs sélectionnés ? Vérifiez votre identité une seule fois pour supprimer toute la sélection.",
     "Permanently delete your account and all data": "Supprimer définitivement votre compte et toutes les données",
     "Permissions": "Autorisations",
     "Permit Passkey registration on non-HTTPS origins (only recommended for development)": "Autoriser l'enregistrement de Passkey sur des origines non-HTTPS (recommandé uniquement pour le développement)",

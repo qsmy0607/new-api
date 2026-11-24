@@ -267,3 +267,15 @@ export async function adminUnbindCustomOAuth(
   )
   return res.data
 }
+
+export async function batchDeleteUsers(
+  ids: number[],
+  proofToken: string
+): Promise<ApiResponse<{ deleted_ids: number[] }>> {
+  const res = await api.post(
+    '/api/user/batch_delete',
+    { user_ids: ids },
+    securityProofConfig(proofToken)
+  )
+  return res.data
+}

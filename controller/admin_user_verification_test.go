@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
@@ -386,4 +387,69 @@ func TestAdminUserVerificationPolicy(t *testing.T) {
 		require.NoError(t, model.DB.Model(&model.AuthFlow{}).Count(&flows).Error)
 		assert.Zero(t, flows)
 	})
+}
+
+func TestAdminUserBatchDeleteProof(t *testing.T) {
+	_, identity, target := setupAdminUserTest(t)
+	require.NoError(t, model.DB.AutoMigrate(&model.ExternalIdentityClaim{}, &model.Token{}))
+	other := &model.User{Username: "batch-other", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, AuthVersion: 1, AffCode: "batch-other"}
+	require.NoError(t, model.DB.Create(other).Error)
+	body := fmt.Sprintf(`{"user_ids":[%d,%d]}`, target.Id, other.Id)
+	response := adminUserRequest(http.MethodPost, "/api/user/batch_delete", body, "", identity, common.RoleRootUser, nil, BatchDeleteUsers)
+	assert.Equal(t, http.StatusForbidden, response.Code)
+	proof := issueSecurityEnrollmentProof(t, identity, service.VerificationOperation{Scope: service.VerificationScopeAdminUsersDelete, Context: []byte(body)}, service.VerificationMethodPassword)
+	mismatch := fmt.Sprintf(`{"user_ids":[%d]}`, target.Id)
+	response = adminUserRequest(http.MethodPost, "/api/user/batch_delete", mismatch, proof, identity, common.RoleRootUser, nil, BatchDeleteUsers)
+	assert.Equal(t, http.StatusForbidden, response.Code)
+	reordered := fmt.Sprintf(`{"user_ids":[%d,%d,%d]}`, other.Id, target.Id, target.Id)
+	response = adminUserRequest(http.MethodPost, "/api/user/batch_delete", reordered, proof, identity, common.RoleRootUser, nil, BatchDeleteUsers)
+	var result securityEnrollmentResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &result))
+	require.True(t, result.Success, response.Body.String())
+	for _, id := range []int{target.Id, other.Id} {
+		_, err := model.GetUserById(id, false)
+		assert.Error(t, err)
+	}
+	// Recreate the same IDs to ensure replay reaches proof consumption, rather than failing on missing users.
+	for _, user := range []*model.User{target, other} {
+		require.NoError(t, model.DB.Create(user).Error)
+	}
+	response = adminUserRequest(http.MethodPost, "/api/user/batch_delete", body, proof, identity, common.RoleRootUser, nil, BatchDeleteUsers)
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &result))
+	assert.Equal(t, "SECURITY_PROOF_CONSUMED", result.Code)
+	// The model repeats role checks under the target row lock.
+	require.NoError(t, model.DB.Model(other).Update("role", common.RoleRootUser).Error)
+	_, err := other.HardDeleteForAdmin(common.RoleRootUser)
+	require.Error(t, err)
+	for _, id := range []int{target.Id, other.Id} {
+		_, err := model.GetUserById(id, false)
+		require.NoError(t, err)
+	}
+	response = adminUserRequest(http.MethodPost, "/api/user/batch_delete", body, "", identity, common.RoleRootUser, nil, BatchDeleteUsers)
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &result))
+	assert.False(t, result.Success)
+
+	fresh := &model.User{Username: "batch-fresh", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, AuthVersion: 1, AffCode: "batch-fresh"}
+	require.NoError(t, model.DB.Create(fresh).Error)
+	response = adminUserRequest(http.MethodPost, "/api/user/batch_delete", fmt.Sprintf(`{"user_ids":[%d]}`, fresh.Id), proof, identity, common.RoleRootUser, nil, BatchDeleteUsers)
+	assert.Equal(t, http.StatusForbidden, response.Code)
+	freshBody := fmt.Sprintf(`{"user_ids":[%d]}`, fresh.Id)
+	expired := issueSecurityEnrollmentProof(t, identity, service.VerificationOperation{Scope: service.VerificationScopeAdminUsersDelete, Context: []byte(freshBody)}, service.VerificationMethodPassword)
+	require.NoError(t, model.DB.Model(&model.AuthFlow{}).Where("user_id = ? AND consumed_at IS NULL", identity.UserID).Update("expires_at", time.Now().Add(-time.Minute)).Error)
+	response = adminUserRequest(http.MethodPost, "/api/user/batch_delete", freshBody, expired, identity, common.RoleRootUser, nil, BatchDeleteUsers)
+	assert.Equal(t, http.StatusForbidden, response.Code)
+	_, err = model.GetUserById(fresh.Id, false)
+	require.NoError(t, err)
+	var audit model.AuditLog
+	require.NoError(t, model.LOG_DB.Where("action = ?", "user.delete").Last(&audit).Error)
+	auditJSON, err := common.Marshal(audit)
+	require.NoError(t, err)
+	assert.NotContains(t, string(auditJSON), proof)
+	assert.NotContains(t, string(auditJSON), expired)
+
+	for _, invalid := range []string{`{"user_ids":[]}`, `{"user_ids":[0]}`} {
+		response = adminUserRequest(http.MethodPost, "/api/user/batch_delete", invalid, "", identity, common.RoleRootUser, nil, BatchDeleteUsers)
+		require.NoError(t, common.Unmarshal(response.Body.Bytes(), &result))
+		assert.False(t, result.Success)
+	}
 }

@@ -4715,6 +4715,7 @@
     "Periodically checks only channels with auto-disable enabled, excluding manually disabled channels.": "Chỉ định kỳ kiểm tra kênh đã bật tự động vô hiệu hóa, không kiểm tra kênh bị vô hiệu hóa thủ công.",
     "Periodically send ping frames to keep streaming connections active.": "Định kỳ gửi các khung ping để duy trì các kết nối truyền phát hoạt động.",
     "Permanently delete {{count}} selected users? Each account requires identity verification. Deletion stops if verification is cancelled or a request fails.": "Xóa vĩnh viễn {{count}} người dùng đã chọn? Mỗi tài khoản cần xác minh danh tính. Quá trình xóa sẽ dừng nếu hủy xác minh hoặc yêu cầu thất bại.",
+    "Permanently delete {{count}} selected users? Verify your identity once to delete the entire selection.": "Xóa vĩnh viễn {{count}} người dùng đã chọn? Chỉ cần xác minh danh tính một lần để xóa toàn bộ mục đã chọn.",
     "Permanently delete your account and all data": "Xóa vĩnh viễn tài khoản của bạn và tất cả dữ liệu",
     "Permissions": "Quyền",
     "Permit Passkey registration on non-HTTPS origins (only recommended for development)": "Cho phép đăng ký Passkey trên các nguồn gốc không phải HTTPS (chỉ khuyến nghị cho mục đích phát triển)",

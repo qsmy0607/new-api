@@ -221,82 +221,84 @@ function BulkDeleteFixture(props: { users?: User[] }) {
   return <DataTableBulkActions table={table} />
 }
 
-it('bulk deletion confirms the selected accounts and obtains a separate proof for each user', async () => {
+it('bulk deletion uses one verification bound to the entire selection', async () => {
   useAuthStore.setState((state) => ({
     auth: { ...state.auth, user: { id: 1, username: 'root', role: 100 } },
   }))
-  const proof = mockVerification('admin.user.delete', 'delete-proof')
-  const post = vi.spyOn(api, 'post').mockResolvedValue(proof)
-  const del = vi
-    .spyOn(api, 'delete')
-    .mockResolvedValue({ data: { success: true } })
+  const proof = mockVerification('admin.users.delete', 'batch-proof')
+  const post = vi
+    .spyOn(api, 'post')
+    .mockImplementation(async (url) =>
+      url === '/api/verify'
+        ? proof
+        : { data: { success: true, data: { deleted_ids: [2, 3] } } }
+    )
   renderInProvider(<BulkDeleteFixture />)
   await userEvent.click(
     screen.getByRole('button', { name: 'Delete selected users' })
   )
-  expect(screen.getByText('managed-user (ID: 2)')).toBeVisible()
-  expect(screen.getByText('second-user (ID: 3)')).toBeVisible()
-  expect(del).not.toHaveBeenCalled()
   await userEvent.click(screen.getByRole('button', { name: /^Delete$/ }))
+  expect(post).not.toHaveBeenCalled()
   await completeTwoFactorVerification()
-  await waitFor(() => expect(del).toHaveBeenCalledTimes(1))
-  await completeTwoFactorVerification()
-  await waitFor(() => expect(del).toHaveBeenCalledTimes(2))
-  expect(del.mock.calls.map((call) => call[0])).toEqual([
-    '/api/user/2/',
-    '/api/user/3/',
-  ])
+  await waitFor(() =>
+    expect(post).toHaveBeenCalledWith(
+      '/api/user/batch_delete',
+      { user_ids: [2, 3] },
+      expect.objectContaining({
+        headers: { 'X-Security-Proof': 'batch-proof' },
+        singleUseAuthorization: true,
+      })
+    )
+  )
   expect(
-    post.mock.calls
-      .filter((call) => call[0] === '/api/verify')
-      .map((call) => call[1])
-  ).toEqual([
+    post.mock.calls.filter((call) => call[0] === '/api/verify')
+  ).toHaveLength(1)
+  expect(post).toHaveBeenCalledWith(
+    '/api/verify',
     expect.objectContaining({
-      scope: 'admin.user.delete',
-      context: { user_id: 2 },
+      scope: 'admin.users.delete',
+      context: { user_ids: [2, 3] },
     }),
-    expect.objectContaining({
-      scope: 'admin.user.delete',
-      context: { user_id: 3 },
-    }),
-  ])
+    expect.anything()
+  )
   await waitFor(() =>
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   )
 })
 
-it('cancelling the second verification preserves the remaining account for another attempt', async () => {
+it('cancelling batch verification deletes no users', async () => {
   useAuthStore.setState((state) => ({
     auth: { ...state.auth, user: { id: 1, username: 'root', role: 100 } },
   }))
-  const proof = mockVerification('admin.user.delete', 'delete-proof')
-  vi.spyOn(api, 'post').mockResolvedValue(proof)
-  const del = vi
-    .spyOn(api, 'delete')
-    .mockResolvedValue({ data: { success: true } })
+  mockVerification('admin.users.delete', 'batch-proof')
+  const post = vi.spyOn(api, 'post')
   renderInProvider(<BulkDeleteFixture />)
   await userEvent.click(
     screen.getByRole('button', { name: 'Delete selected users' })
   )
   await userEvent.click(screen.getByRole('button', { name: /^Delete$/ }))
-  await completeTwoFactorVerification()
   await screen.findByLabelText('Authenticator code or backup code')
   await userEvent.keyboard('{Escape}')
   await screen.findByRole('alertdialog')
-  expect(del).toHaveBeenCalledTimes(1)
-  expect(screen.getByText('second-user (ID: 3)')).toBeVisible()
-  expect(screen.queryByText('managed-user (ID: 2)')).not.toBeInTheDocument()
+  expect(post).not.toHaveBeenCalled()
 })
 
-it('a failed delete stops the batch and preserves all undeleted accounts', async () => {
+it('a partial failure removes completed users and preserves remaining accounts', async () => {
   useAuthStore.setState((state) => ({
     auth: { ...state.auth, user: { id: 1, username: 'root', role: 100 } },
   }))
-  const proof = mockVerification('admin.user.delete', 'delete-proof')
-  vi.spyOn(api, 'post').mockResolvedValue(proof)
-  const del = vi
-    .spyOn(api, 'delete')
-    .mockResolvedValue({ data: { success: false, message: 'Deletion failed' } })
+  const proof = mockVerification('admin.users.delete', 'batch-proof')
+  vi.spyOn(api, 'post').mockImplementation(async (url) =>
+    url === '/api/verify'
+      ? proof
+      : {
+          data: {
+            success: false,
+            message: 'Failed to delete user',
+            data: { deleted_ids: [2] },
+          },
+        }
+  )
   renderInProvider(<BulkDeleteFixture />)
   await userEvent.click(
     screen.getByRole('button', { name: 'Delete selected users' })
@@ -304,12 +306,13 @@ it('a failed delete stops the batch and preserves all undeleted accounts', async
   await userEvent.click(screen.getByRole('button', { name: /^Delete$/ }))
   await completeTwoFactorVerification()
   await screen.findByRole('alertdialog')
-  expect(del).toHaveBeenCalledTimes(1)
-  expect(screen.getByText('managed-user (ID: 2)')).toBeVisible()
+  await waitFor(() =>
+    expect(screen.queryByText('managed-user (ID: 2)')).not.toBeInTheDocument()
+  )
   expect(screen.getByText('second-user (ID: 3)')).toBeVisible()
 })
 
-it('bulk deletion is disabled when selection includes the operator or an equal-role account', () => {
+it('bulk deletion is disabled for the operator or an equal-role account', () => {
   useAuthStore.setState((state) => ({
     auth: { ...state.auth, user: { id: 2, username: 'admin', role: 10 } },
   }))

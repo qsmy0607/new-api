@@ -4715,6 +4715,7 @@
     "Periodically checks only channels with auto-disable enabled, excluding manually disabled channels.": "自動無効化が有効なチャネルのみを定期チェックします。手動で無効化されたチャネルは対象外です。",
     "Periodically send ping frames to keep streaming connections active.": "ストリーミング接続をアクティブに保つために、定期的にpingフレームを送信します。",
     "Permanently delete {{count}} selected users? Each account requires identity verification. Deletion stops if verification is cancelled or a request fails.": "選択した {{count}} 人のユーザーを完全に削除しますか？アカウントごとに本人確認が必要です。確認をキャンセルした場合やリクエストが失敗した場合は削除を停止します。",
+    "Permanently delete {{count}} selected users? Verify your identity once to delete the entire selection.": "選択した {{count}} 人のユーザーを完全に削除しますか？一度の本人確認で選択した全員を削除できます。",
     "Permanently delete your account and all data": "アカウントとすべてのデータを永久に削除",
     "Permissions": "権限",
     "Permit Passkey registration on non-HTTPS origins (only recommended for development)": "非HTTPSオリジンでのパスキー登録を許可する（開発でのみ推奨）",

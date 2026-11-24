@@ -41,6 +41,7 @@ const (
 	VerificationScopeAdminUserCreate       = "admin.user.create"
 	VerificationScopeAdminUserUpdate       = "admin.user.update"
 	VerificationScopeAdminUserDelete       = "admin.user.delete"
+	VerificationScopeAdminUsersDelete      = "admin.users.delete"
 	VerificationScopeAdminUserManage       = "admin.user.manage"
 	VerificationScopeAdminUserPasskeyReset = "admin.user.passkey.reset"
 	VerificationScopeAdminUserTwoFADisable = "admin.user.2fa.disable"
@@ -80,6 +81,10 @@ type AccountBindingContext struct {
 
 type AccountUnbindingContext struct {
 	ProviderID int `json:"provider_id"`
+}
+
+type AdminUsersDeleteContext struct {
+	UserIDs []int `json:"user_ids"`
 }
 
 type AdminUserContext struct {
@@ -197,6 +202,19 @@ func BindVerificationOperation(operation VerificationOperation) (VerificationBin
 		if len(fields) != 1 || common.Unmarshal(fields["provider_id"], &context.ProviderID) != nil || context.ProviderID <= 0 {
 			return VerificationBinding{}, ErrVerificationContextInvalid
 		}
+		normalized = context
+	case VerificationScopeAdminUsersDelete:
+		var context AdminUsersDeleteContext
+		if len(fields) != 1 || common.Unmarshal(fields["user_ids"], &context.UserIDs) != nil || len(context.UserIDs) == 0 || len(context.UserIDs) > 1000 {
+			return VerificationBinding{}, ErrVerificationContextInvalid
+		}
+		for _, id := range context.UserIDs {
+			if id <= 0 {
+				return VerificationBinding{}, ErrVerificationContextInvalid
+			}
+		}
+		slices.Sort(context.UserIDs)
+		context.UserIDs = slices.Compact(context.UserIDs)
 		normalized = context
 	case VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete, VerificationScopeAdminUserPasskeyReset, VerificationScopeAdminUserTwoFADisable:
 		var context AdminUserContext
@@ -328,7 +346,7 @@ func securityVerificationPolicy(scope string, state model.UserVerificationState)
 		VerificationScopeAccessTokenGenerate, VerificationScopeAccessTokenUpdate, VerificationScopeAccessTokenRevoke,
 		VerificationScopeAccountBind, VerificationScopeAccountUnbind,
 		VerificationScopePasswordSet, VerificationScopePasswordChange, VerificationScopeAccountDelete,
-		VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete,
+		VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete, VerificationScopeAdminUsersDelete,
 		VerificationScopeAdminUserManage, VerificationScopeAdminUserPasskeyReset,
 		VerificationScopeAdminUserTwoFADisable, VerificationScopeAdminUserBindingClear:
 		if scope == VerificationScopeAccountDelete && state.Role == common.RoleRootUser {
@@ -378,7 +396,7 @@ func GetVerificationRequirements(identity AuthIdentity, scope string) (*Verifica
 	if scope == VerificationScopeChannelKeyRead && state.Role != common.RoleRootUser {
 		return nil, ErrVerificationForbidden
 	}
-	if strings.HasPrefix(scope, verificationScopeAdminUserPrefix) && state.Role < common.RoleAdminUser {
+	if (strings.HasPrefix(scope, verificationScopeAdminUserPrefix) || scope == VerificationScopeAdminUsersDelete) && state.Role < common.RoleAdminUser {
 		return nil, ErrVerificationForbidden
 	}
 	if err := requireAccessTokenVerificationScope(identity, scope); err != nil {
@@ -393,7 +411,7 @@ func GetVerificationRequirements(identity AuthIdentity, scope string) (*Verifica
 		if methods[i].Method == VerificationMethodPassword && !common.PasswordLoginEnabled {
 			switch scope {
 			case VerificationScopeAccountBind, VerificationScopeAccountUnbind, VerificationScopePasswordSet, VerificationScopePasswordChange, VerificationScopeAccountDelete,
-				VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete,
+				VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete, VerificationScopeAdminUsersDelete,
 				VerificationScopeAdminUserManage, VerificationScopeAdminUserPasskeyReset,
 				VerificationScopeAdminUserTwoFADisable, VerificationScopeAdminUserBindingClear:
 				methods[i].Available, methods[i].Reason = false, "Password authentication is disabled."
