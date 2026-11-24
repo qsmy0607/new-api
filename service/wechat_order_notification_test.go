@@ -227,7 +227,7 @@ func TestWeChatOrderDeliveryAndRecovery(t *testing.T) {
 	assert.Equal(t, 2, tokenCalls)
 	assert.NotContains(t, payloads[0], "url")
 	assert.Equal(t, map[string]any{"value": "12.50"}, payloads[0]["data"].(map[string]any)["amount"])
-	assert.Equal(t, map[string]any{"value": "2023-11-15 06:13:20 +08:00"}, payloads[0]["data"].(map[string]any)["order_time"])
+	assert.Equal(t, map[string]any{"value": "2023-11-15 06:13:20"}, payloads[0]["data"].(map[string]any)["order_time"])
 	// Simulate process restart and a due retry; the shared token cache is reused.
 	weChatOrderClient = &weChatTemplateClient{http: server.Client(), baseURL: server.URL}
 	require.NoError(t, db.Model(&entries[1]).Update("next_attempt", common.GetTimestamp()-1).Error)

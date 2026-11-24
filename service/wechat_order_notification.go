@@ -149,7 +149,7 @@ func (c *weChatTemplateClient) send(ctx context.Context, config model.WeChatOrde
 			"data": map[string]any{
 				"order_no":   map[string]string{"value": entry.TradeNo},
 				"amount":     map[string]string{"value": entry.Amount},
-				"order_time": map[string]string{"value": time.Unix(entry.OrderTime, 0).In(time.FixedZone("UTC+8", 8*3600)).Format("2006-01-02 15:04:05 +08:00")},
+				"order_time": map[string]string{"value": time.Unix(entry.OrderTime, 0).In(time.FixedZone("UTC+8", 8*3600)).Format("2006-01-02 15:04:05")},
 			},
 		}, &result)
 		if err != nil {
