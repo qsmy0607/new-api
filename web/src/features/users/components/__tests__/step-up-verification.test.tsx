@@ -17,15 +17,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { Row } from '@tanstack/react-table'
+import { getCoreRowModel, useReactTable, type Row } from '@tanstack/react-table'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useEffect } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth-store'
 
 import type { User } from '../../types'
+import { DataTableBulkActions } from '../data-table-bulk-actions'
 import { DataTableRowActions } from '../data-table-row-actions'
 import { UsersDeleteDialog } from '../users-delete-dialog'
 import { UsersProvider, useUsers } from '../users-provider'
@@ -104,6 +106,7 @@ async function completeTwoFactorVerification() {
 
 afterEach(() => {
   cleanup()
+  useAuthStore.setState((state) => ({ auth: { ...state.auth, user: null } }))
   vi.restoreAllMocks()
 })
 
@@ -197,4 +200,123 @@ it('disabling a user from the row menu binds the proof to the user and action', 
     }),
     expect.anything()
   )
+})
+
+function BulkDeleteFixture(props: { users?: User[] }) {
+  const users = props.users ?? [
+    target,
+    { ...target, id: 3, username: 'second-user' },
+  ]
+  const table = useReactTable({
+    data: users,
+    columns: [{ accessorKey: 'username' }],
+    getRowId: (user) => String(user.id),
+    getCoreRowModel: getCoreRowModel(),
+    initialState: {
+      rowSelection: Object.fromEntries(
+        users.map((user) => [String(user.id), true])
+      ),
+    },
+  })
+  return <DataTableBulkActions table={table} />
+}
+
+it('bulk deletion confirms the selected accounts and obtains a separate proof for each user', async () => {
+  useAuthStore.setState((state) => ({
+    auth: { ...state.auth, user: { id: 1, username: 'root', role: 100 } },
+  }))
+  const proof = mockVerification('admin.user.delete', 'delete-proof')
+  const post = vi.spyOn(api, 'post').mockResolvedValue(proof)
+  const del = vi
+    .spyOn(api, 'delete')
+    .mockResolvedValue({ data: { success: true } })
+  renderInProvider(<BulkDeleteFixture />)
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Delete selected users' })
+  )
+  expect(screen.getByText('managed-user (ID: 2)')).toBeVisible()
+  expect(screen.getByText('second-user (ID: 3)')).toBeVisible()
+  expect(del).not.toHaveBeenCalled()
+  await userEvent.click(screen.getByRole('button', { name: /^Delete$/ }))
+  await completeTwoFactorVerification()
+  await waitFor(() => expect(del).toHaveBeenCalledTimes(1))
+  await completeTwoFactorVerification()
+  await waitFor(() => expect(del).toHaveBeenCalledTimes(2))
+  expect(del.mock.calls.map((call) => call[0])).toEqual([
+    '/api/user/2/',
+    '/api/user/3/',
+  ])
+  expect(
+    post.mock.calls
+      .filter((call) => call[0] === '/api/verify')
+      .map((call) => call[1])
+  ).toEqual([
+    expect.objectContaining({
+      scope: 'admin.user.delete',
+      context: { user_id: 2 },
+    }),
+    expect.objectContaining({
+      scope: 'admin.user.delete',
+      context: { user_id: 3 },
+    }),
+  ])
+  await waitFor(() =>
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  )
+})
+
+it('cancelling the second verification preserves the remaining account for another attempt', async () => {
+  useAuthStore.setState((state) => ({
+    auth: { ...state.auth, user: { id: 1, username: 'root', role: 100 } },
+  }))
+  const proof = mockVerification('admin.user.delete', 'delete-proof')
+  vi.spyOn(api, 'post').mockResolvedValue(proof)
+  const del = vi
+    .spyOn(api, 'delete')
+    .mockResolvedValue({ data: { success: true } })
+  renderInProvider(<BulkDeleteFixture />)
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Delete selected users' })
+  )
+  await userEvent.click(screen.getByRole('button', { name: /^Delete$/ }))
+  await completeTwoFactorVerification()
+  await screen.findByLabelText('Authenticator code or backup code')
+  await userEvent.keyboard('{Escape}')
+  await screen.findByRole('alertdialog')
+  expect(del).toHaveBeenCalledTimes(1)
+  expect(screen.getByText('second-user (ID: 3)')).toBeVisible()
+  expect(screen.queryByText('managed-user (ID: 2)')).not.toBeInTheDocument()
+})
+
+it('a failed delete stops the batch and preserves all undeleted accounts', async () => {
+  useAuthStore.setState((state) => ({
+    auth: { ...state.auth, user: { id: 1, username: 'root', role: 100 } },
+  }))
+  const proof = mockVerification('admin.user.delete', 'delete-proof')
+  vi.spyOn(api, 'post').mockResolvedValue(proof)
+  const del = vi
+    .spyOn(api, 'delete')
+    .mockResolvedValue({ data: { success: false, message: 'Deletion failed' } })
+  renderInProvider(<BulkDeleteFixture />)
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Delete selected users' })
+  )
+  await userEvent.click(screen.getByRole('button', { name: /^Delete$/ }))
+  await completeTwoFactorVerification()
+  await screen.findByRole('alertdialog')
+  expect(del).toHaveBeenCalledTimes(1)
+  expect(screen.getByText('managed-user (ID: 2)')).toBeVisible()
+  expect(screen.getByText('second-user (ID: 3)')).toBeVisible()
+})
+
+it('bulk deletion is disabled when selection includes the operator or an equal-role account', () => {
+  useAuthStore.setState((state) => ({
+    auth: { ...state.auth, user: { id: 2, username: 'admin', role: 10 } },
+  }))
+  renderInProvider(
+    <BulkDeleteFixture users={[target, { ...target, id: 3, role: 10 }]} />
+  )
+  expect(
+    screen.getByRole('button', { name: 'Delete selected users' })
+  ).toBeDisabled()
 })

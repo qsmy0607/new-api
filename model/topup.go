@@ -215,6 +215,10 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 		if err := tx.Save(topUp).Error; err != nil {
 			return err
 		}
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, fmt.Sprintf("%.2f", topUp.Money), topUp.CreateTime); err != nil {
+			return err
+		}
+
 		return creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil)
 	})
 	if err != nil {
@@ -233,7 +237,7 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 	return false, nil
 }
 
-func Recharge(referenceId string, customerId string, callerIp string) (err error) {
+func Recharge(referenceId string, customerId string, callerIp string, paidAmount ...string) (err error) {
 	if referenceId == "" {
 		return errors.New("payment order number not provided")
 	}
@@ -273,6 +277,14 @@ func Recharge(referenceId string, customerId string, callerIp string) (err error
 		if err != nil || quota <= 0 {
 			return ErrInvalidTopUpQuota
 		}
+		notificationAmount := fmt.Sprintf("%.2f", topUp.Money)
+		if len(paidAmount) > 0 {
+			notificationAmount = paidAmount[0]
+		}
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, notificationAmount, topUp.CreateTime); err != nil {
+			return err
+		}
+
 		return creditTopUpQuota(tx, topUp.UserId, quota, map[string]any{
 			"stripe_customer": customerId,
 		})
@@ -522,7 +534,7 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 	RecordTopupLog(userId, common.NewMessage("Administrator completed the order, amount added: {{quota}}, payment amount: {{amount}}", map[string]any{"quota": logger.FormatQuota(quotaToAdd), "amount": fmt.Sprintf("%f", payMoney)}), callerIp, paymentMethod, "admin")
 	return nil
 }
-func RechargeCreem(referenceId string, customerEmail string, customerName string, callerIp string) (err error) {
+func RechargeCreem(referenceId string, customerEmail string, customerName string, callerIp string, paidAmount ...string) (err error) {
 	if referenceId == "" {
 		return errors.New("payment order number not provided")
 	}
@@ -578,6 +590,14 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 			if user.Email == "" {
 				updateFields["email"] = customerEmail
 			}
+		}
+
+		notificationAmount := fmt.Sprintf("%.2f", topUp.Money)
+		if len(paidAmount) > 0 {
+			notificationAmount = paidAmount[0]
+		}
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, notificationAmount, topUp.CreateTime); err != nil {
+			return err
 		}
 
 		return creditTopUpQuota(tx, topUp.UserId, quota, updateFields)
@@ -638,6 +658,10 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 			return err
 		}
 
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, fmt.Sprintf("%.2f", topUp.Money), topUp.CreateTime); err != nil {
+			return err
+		}
+
 		return creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil)
 	})
 
@@ -695,6 +719,10 @@ func RechargeWaffoPancake(tradeNo string) (err error) {
 		topUp.CompleteTime = common.GetTimestamp()
 		topUp.Status = common.TopUpStatusSuccess
 		if err := tx.Save(topUp).Error; err != nil {
+			return err
+		}
+
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, fmt.Sprintf("%.2f", topUp.Money), topUp.CreateTime); err != nil {
 			return err
 		}
 

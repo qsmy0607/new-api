@@ -281,13 +281,25 @@ func fulfillOrder(ctx context.Context, event stripe.Event, referenceId string, c
 
 	LockOrder(referenceId)
 	defer UnlockOrder(referenceId)
+	paidAmount := event.GetObjectValue("amount_total") + " " + strings.ToUpper(event.GetObjectValue("currency")) + " (minor units)"
+	if total, err := decimal.NewFromString(event.GetObjectValue("amount_total")); err == nil {
+		currency := strings.ToUpper(event.GetObjectValue("currency"))
+		exponent := int32(2)
+		switch currency {
+		case "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF":
+			exponent = 0
+		case "BHD", "JOD", "KWD", "OMR", "TND":
+			exponent = 3
+		}
+		paidAmount = total.Shift(-exponent).StringFixed(exponent) + " " + currency
+	}
 	payload := map[string]any{
 		"customer":     customerId,
 		"amount_total": event.GetObjectValue("amount_total"),
 		"currency":     strings.ToUpper(event.GetObjectValue("currency")),
 		"event_type":   string(event.Type),
 	}
-	if err := model.CompleteSubscriptionOrder(referenceId, common.GetJsonString(payload), model.PaymentProviderStripe, ""); err == nil {
+	if err := model.CompleteSubscriptionOrder(referenceId, common.GetJsonString(payload), model.PaymentProviderStripe, "", paidAmount); err == nil {
 		logger.LogInfo(ctx, common.LogText("Stripe subscription order processed trade_no=%s event_type=%s client_ip=%s", referenceId, string(event.Type), callerIp))
 		return
 	} else if err != nil && !errors.Is(err, model.ErrSubscriptionOrderNotFound) {
@@ -295,7 +307,7 @@ func fulfillOrder(ctx context.Context, event stripe.Event, referenceId string, c
 		return
 	}
 
-	err := model.Recharge(referenceId, customerId, callerIp)
+	err := model.Recharge(referenceId, customerId, callerIp, paidAmount)
 	if err != nil {
 		logger.LogError(ctx, common.LogText("Stripe top-up processing failed trade_no=%s event_type=%s client_ip=%s error=%q", referenceId, string(event.Type), callerIp, err.Error()))
 		return

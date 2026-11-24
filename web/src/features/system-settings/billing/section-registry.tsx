@@ -22,6 +22,7 @@ import { CheckinSettingsSection } from '../general/checkin-settings-section'
 import { PricingSection } from '../general/pricing-section'
 import { QuotaSettingsSection } from '../general/quota-settings-section'
 import { PaymentSettingsSection } from '../integrations/payment-settings-section'
+import { WeChatOrderSettingsSection } from '../integrations/wechat-order-settings-section'
 import { RatioSettingsCard } from '../models/ratio-settings-card'
 import type { BillingSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
@@ -54,6 +55,11 @@ const getGroupDefaults = (settings: BillingSettings) => ({
 })
 
 const BILLING_SECTIONS = [
+  {
+    id: 'wechat-order',
+    titleKey: 'WeChat Order Notifications',
+    build: () => <WeChatOrderSettingsSection />,
+  },
   {
     id: 'quota',
     titleKey: 'Quota Settings',

@@ -566,7 +566,7 @@ func refreshSubscriptionUserGroupCache(userId int, operation string) {
 // Complete a subscription order (idempotent). Creates a UserSubscription snapshot from the plan.
 // expectedPaymentProvider guards against cross-gateway callback attacks (empty skips the check).
 // actualPaymentMethod updates the order's PaymentMethod to reflect the real payment type used (empty skips update).
-func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedPaymentProvider string, actualPaymentMethod string) error {
+func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedPaymentProvider string, actualPaymentMethod string, paidAmount ...string) error {
 	if tradeNo == "" {
 		return errors.New("tradeNo is empty")
 	}
@@ -627,6 +627,16 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if err := tx.Save(&order).Error; err != nil {
 			return err
 		}
+		if order.PaymentProvider != PaymentProviderBalance && order.PaymentMethod != PaymentMethodBalance {
+			amount := fmt.Sprintf("%.2f", order.Money)
+			if len(paidAmount) > 0 {
+				amount = paidAmount[0]
+			}
+			if err := QueueWeChatOrderNotification(tx, "subscription", order.TradeNo, amount, order.CreateTime); err != nil {
+				return err
+			}
+		}
+
 		logUserId = order.UserId
 		logPlanTitle = plan.Title
 		logMoney = order.Money

@@ -216,6 +216,10 @@ func SetApiRouter(router *gin.Engine) {
 		optionRoute.Use(middleware.RootAuth())
 		{
 			optionRoute.GET("/", controller.GetOptions)
+			optionRoute.GET("/wechat-order", controller.GetWeChatOrderNotification)
+			optionRoute.PUT("/wechat-order", controller.SaveWeChatOrderNotification)
+			optionRoute.POST("/wechat-order/test", controller.TestWeChatOrderNotification)
+			optionRoute.POST("/wechat-order/retry", controller.RetryWeChatOrderNotification)
 			optionRoute.GET("/request_policy", controller.GetRequestPolicy)
 			optionRoute.PATCH("/request_policy", controller.UpdateRequestPolicy)
 			optionRoute.PUT("/", controller.UpdateOption)

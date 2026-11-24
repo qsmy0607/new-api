@@ -178,7 +178,7 @@ test('keeps names containing table delimiters and markup inside one Markdown cel
   )
 })
 
-test('successful batch creation opens export with returned codes and the configured currency', async () => {
+test('successful batch creation closes without offering file export', async () => {
   const downloads = captureDownloads()
   const user = userEvent.setup()
   useSystemConfigStore.getState().setConfig({
@@ -207,33 +207,18 @@ test('successful batch creation opens export with returned codes and the configu
   await user.click(
     within(createDialog).getByRole('button', { name: 'Save changes' })
   )
-  const exportDialog = await screen.findByRole('dialog', {
-    name: 'Redemption codes created',
-  })
-  expect(exportDialog).toHaveTextContent(
-    'Successfully created 2 redemption codes'
-  )
   await waitFor(() =>
     expect(
       screen.queryByRole('dialog', { name: 'Create Redemption Code' })
     ).not.toBeInTheDocument()
   )
-  await user.click(
-    within(exportDialog).getByRole('checkbox', { name: 'Save as a file' })
-  )
-  await user.click(
-    within(exportDialog).getByRole('radio', { name: 'Save as TXT' })
-  )
-  expect(downloads).toHaveLength(0)
-  await user.click(within(exportDialog).getByRole('button', { name: 'Done' }))
-  await waitFor(() =>
-    expect(
-      screen.queryByRole('dialog', { name: 'Redemption codes created' })
-    ).not.toBeInTheDocument()
-  )
-  expect(await readDownload(downloads[0])).toBe(
-    'batch\tcreatedA\t¥2,000\nbatch\tcreatedB\t¥2,000\n'
-  )
+  expect(
+    screen.queryByRole('dialog', { name: 'Redemption codes created' })
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('checkbox', { name: 'Save as a file' })
+  ).not.toBeInTheDocument()
+  expect(downloads).toEqual([])
 })
 
 test('failed creation does not open a success export dialog', async () => {
