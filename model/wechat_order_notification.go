@@ -18,6 +18,7 @@ type WeChatOrderNotification struct {
 	Recipient   string `json:"recipient" gorm:"type:varchar(64);uniqueIndex:idx_wechat_order_recipient,priority:3"`
 	AppID       string `json:"-" gorm:"type:varchar(64)"`
 	TemplateID  string `json:"-" gorm:"type:varchar(128)"`
+	ProductName string `json:"product_name" gorm:"type:varchar(255)"`
 	Amount      string `json:"amount" gorm:"type:varchar(128)"`
 	OrderTime   int64  `json:"order_time"`
 	Status      string `json:"status" gorm:"type:varchar(20);index:idx_wechat_due,priority:1"`
@@ -91,7 +92,7 @@ func SaveWeChatOrderConfig(c WeChatOrderConfig) error {
 	return UpdateOption("WeChatOrderConfigSecret", string(encoded))
 }
 
-func QueueWeChatOrderNotification(tx *gorm.DB, orderType, tradeNo, amount string, orderTime int64) error {
+func QueueWeChatOrderNotification(tx *gorm.DB, orderType, tradeNo, amount string, orderTime int64, productName string) error {
 	c := GetWeChatOrderConfig()
 	if !c.Enabled {
 		return nil
@@ -102,7 +103,7 @@ func QueueWeChatOrderNotification(tx *gorm.DB, orderType, tradeNo, amount string
 	now := common.GetTimestamp()
 	for recipient := range strings.SplitSeq(c.Recipients, ",") {
 		entry := WeChatOrderNotification{OrderType: orderType, TradeNo: tradeNo, Recipient: recipient,
-			AppID: c.AppID, TemplateID: c.TemplateID, Amount: amount, OrderTime: orderTime,
+			AppID: c.AppID, TemplateID: c.TemplateID, Amount: amount, OrderTime: orderTime, ProductName: productName,
 			Status: "pending", NextAttempt: now, CreatedAt: now}
 		if err := tx.Create(&entry).Error; err != nil {
 			return err

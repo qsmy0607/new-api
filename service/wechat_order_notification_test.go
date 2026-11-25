@@ -18,6 +18,24 @@ import (
 	"gorm.io/gorm"
 )
 
+type releasedWeChatOrderNotification struct {
+	ID          int64  `json:"id" gorm:"primaryKey"`
+	OrderType   string `json:"order_type" gorm:"type:varchar(20);uniqueIndex:idx_wechat_order_recipient,priority:1"`
+	TradeNo     string `json:"trade_no" gorm:"type:varchar(255);uniqueIndex:idx_wechat_order_recipient,priority:2"`
+	Recipient   string `json:"recipient" gorm:"type:varchar(64);uniqueIndex:idx_wechat_order_recipient,priority:3"`
+	AppID       string `json:"-" gorm:"type:varchar(64)"`
+	TemplateID  string `json:"-" gorm:"type:varchar(128)"`
+	Amount      string `json:"amount" gorm:"type:varchar(128)"`
+	OrderTime   int64  `json:"order_time"`
+	Status      string `json:"status" gorm:"type:varchar(20);index:idx_wechat_due,priority:1"`
+	Attempts    int    `json:"attempts"`
+	NextAttempt int64  `json:"next_attempt" gorm:"index:idx_wechat_due,priority:2"`
+	LastError   string `json:"last_error" gorm:"type:varchar(128)"`
+	CreatedAt   int64  `json:"created_at"`
+}
+
+func (releasedWeChatOrderNotification) TableName() string { return "we_chat_order_notifications" }
+
 func weChatOrderFixture(t *testing.T, dialector gorm.Dialector) *gorm.DB {
 	t.Helper()
 	if dialector.Name() == "sqlite" {
@@ -82,9 +100,18 @@ func TestWeChatOrderPaymentOutbox(t *testing.T) {
 			// created before the additive outbox migration, without notifying it.
 			history := model.TopUp{TradeNo: "historical", Status: common.TopUpStatusSuccess, Money: 7.25}
 			require.NoError(t, db.Create(&history).Error)
+			require.NoError(t, db.AutoMigrate(&releasedWeChatOrderNotification{}))
+			legacy := releasedWeChatOrderNotification{OrderType: "topup", TradeNo: "legacy", Recipient: "receiver", TemplateID: "old-template", Amount: "9.50", OrderTime: 1700000000, Status: "sent"}
+			require.NoError(t, db.Create(&legacy).Error)
 			for range 2 {
 				require.NoError(t, db.AutoMigrate(&model.WeChatOrderNotification{}))
 			}
+			var oldEntry model.WeChatOrderNotification
+			require.NoError(t, db.First(&oldEntry, legacy.ID).Error)
+			assert.Equal(t, legacy.Amount, oldEntry.Amount)
+			assert.Equal(t, legacy.OrderTime, oldEntry.OrderTime)
+			assert.Equal(t, "old-template", oldEntry.TemplateID)
+			assert.Empty(t, oldEntry.ProductName)
 			var preserved model.TopUp
 			require.NoError(t, db.First(&preserved, history.Id).Error)
 			assert.Equal(t, history.TradeNo, preserved.TradeNo)
@@ -114,7 +141,11 @@ func TestWeChatOrderPaymentOutbox(t *testing.T) {
 				var entries []model.WeChatOrderNotification
 				require.NoError(t, db.Where("trade_no = ?", order.TradeNo).Find(&entries).Error)
 				require.Len(t, entries, 2)
-				assert.Equal(t, order.CreateTime, entries[0].OrderTime)
+				assert.Greater(t, entries[0].OrderTime, order.CreateTime)
+				assert.Equal(t, "额度充值", entries[0].ProductName)
+				var paid model.TopUp
+				require.NoError(t, db.First(&paid, order.Id).Error)
+				assert.Equal(t, paid.CompleteTime, entries[0].OrderTime)
 				if provider == model.PaymentProviderStripe || provider == model.PaymentProviderCreem {
 					assert.Equal(t, "0.75 USD", entries[0].Amount)
 				}
@@ -130,6 +161,10 @@ func TestWeChatOrderPaymentOutbox(t *testing.T) {
 			require.NoError(t, db.Where("trade_no = ?", subscription.TradeNo).Find(&entries).Error)
 			require.Len(t, entries, 2)
 			assert.Equal(t, "subscription", entries[0].OrderType)
+			assert.Equal(t, plan.Title, entries[0].ProductName)
+			var paidSubscription model.SubscriptionOrder
+			require.NoError(t, db.First(&paidSubscription, subscription.Id).Error)
+			assert.Equal(t, paidSubscription.CompleteTime, entries[0].OrderTime)
 			// The companion recharge record must not produce a second event.
 			var companion model.TopUp
 			require.NoError(t, db.Where("trade_no = ?", subscription.TradeNo).First(&companion).Error)
@@ -153,7 +188,7 @@ func TestWeChatOrderPaymentOutbox(t *testing.T) {
 			config.Enabled = false
 			require.NoError(t, model.SaveWeChatOrderConfig(config))
 			require.NoError(t, db.Transaction(func(tx *gorm.DB) error {
-				return model.QueueWeChatOrderNotification(tx, "topup", "disabled", "1.00", 1700000000)
+				return model.QueueWeChatOrderNotification(tx, "topup", "disabled", "1.00", 1700000000, "额度充值")
 			}))
 			require.NoError(t, db.Model(&model.WeChatOrderNotification{}).Where("trade_no = ?", "disabled").Count(&count).Error)
 			assert.Zero(t, count)
@@ -197,7 +232,7 @@ func TestWeChatOrderDeliveryAndRecovery(t *testing.T) {
 			var payload map[string]any
 			require.NoError(t, common.DecodeJson(r.Body, &payload))
 			payloads = append(payloads, payload)
-			if payload["data"].(map[string]any)["order_no"].(map[string]any)["value"] == "permanent" {
+			if payload["data"].(map[string]any)["name"].(map[string]any)["value"] == "permanent" {
 				_, _ = w.Write([]byte(`{"errcode":43004}`))
 				return
 			}
@@ -215,7 +250,7 @@ func TestWeChatOrderDeliveryAndRecovery(t *testing.T) {
 	t.Cleanup(server.Close)
 	weChatOrderClient = &weChatTemplateClient{http: server.Client(), baseURL: server.URL}
 	require.NoError(t, db.Transaction(func(tx *gorm.DB) error {
-		return model.QueueWeChatOrderNotification(tx, "topup", "paid", "12.50", 1700000000)
+		return model.QueueWeChatOrderNotification(tx, "topup", "paid", "12.50", 1700000000, "额度充值")
 	}))
 	require.NoError(t, runWeChatOrderNotifications(context.Background()))
 	var entries []model.WeChatOrderNotification
@@ -226,8 +261,10 @@ func TestWeChatOrderDeliveryAndRecovery(t *testing.T) {
 	assert.Equal(t, "WeChat API error -1", entries[1].LastError)
 	assert.Equal(t, 2, tokenCalls)
 	assert.NotContains(t, payloads[0], "url")
+	assert.Equal(t, map[string]any{"value": "额度充值"}, payloads[0]["data"].(map[string]any)["name"])
+
 	assert.Equal(t, map[string]any{"value": "12.50"}, payloads[0]["data"].(map[string]any)["amount"])
-	assert.Equal(t, map[string]any{"value": "2023-11-15 06:13:20"}, payloads[0]["data"].(map[string]any)["order_time"])
+	assert.Equal(t, map[string]any{"value": "2023-11-15 06:13:20"}, payloads[0]["data"].(map[string]any)["pay_time"])
 	// Simulate process restart and a due retry; the shared token cache is reused.
 	weChatOrderClient = &weChatTemplateClient{http: server.Client(), baseURL: server.URL}
 	require.NoError(t, db.Model(&entries[1]).Update("next_attempt", common.GetTimestamp()-1).Error)
@@ -246,7 +283,7 @@ func TestWeChatOrderDeliveryAndRecovery(t *testing.T) {
 	config.Recipients = "receiver"
 	require.NoError(t, model.SaveWeChatOrderConfig(config))
 	require.NoError(t, db.Transaction(func(tx *gorm.DB) error {
-		return model.QueueWeChatOrderNotification(tx, "topup", "permanent", "1.00", 1700000000)
+		return model.QueueWeChatOrderNotification(tx, "topup", "permanent", "1.00", 1700000000, "permanent")
 	}))
 	require.NoError(t, runWeChatOrderNotifications(context.Background()))
 	var permanent model.WeChatOrderNotification

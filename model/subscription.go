@@ -632,7 +632,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 			if len(paidAmount) > 0 {
 				amount = paidAmount[0]
 			}
-			if err := QueueWeChatOrderNotification(tx, "subscription", order.TradeNo, amount, order.CreateTime); err != nil {
+			if err := QueueWeChatOrderNotification(tx, "subscription", order.TradeNo, amount, order.CompleteTime, plan.Title); err != nil {
 				return err
 			}
 		}

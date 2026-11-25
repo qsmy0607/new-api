@@ -147,9 +147,12 @@ func (c *weChatTemplateClient) send(ctx context.Context, config model.WeChatOrde
 		err = c.request(ctx, http.MethodPost, "/cgi-bin/message/template/send?access_token="+url.QueryEscape(token), map[string]any{
 			"touser": entry.Recipient, "template_id": entry.TemplateID,
 			"data": map[string]any{
+				// Keep legacy template fields for already queued notifications.
 				"order_no":   map[string]string{"value": entry.TradeNo},
-				"amount":     map[string]string{"value": entry.Amount},
 				"order_time": map[string]string{"value": time.Unix(entry.OrderTime, 0).In(time.FixedZone("UTC+8", 8*3600)).Format("2006-01-02 15:04:05")},
+				"name":       map[string]string{"value": entry.ProductName},
+				"amount":     map[string]string{"value": entry.Amount},
+				"pay_time":   map[string]string{"value": time.Unix(entry.OrderTime, 0).In(time.FixedZone("UTC+8", 8*3600)).Format("2006-01-02 15:04:05")},
 			},
 		}, &result)
 		if err != nil {
@@ -190,7 +193,7 @@ func SendWeChatOrderTest(ctx context.Context) error {
 	for _, recipient := range strings.Split(config.Recipients, ",") {
 		if err := weChatOrderClient.send(ctx, config, model.WeChatOrderNotification{AppID: config.AppID,
 			Recipient: recipient, TemplateID: config.TemplateID, TradeNo: "TEST-" + time.Now().Format("20060102150405"),
-			Amount: "0.00", OrderTime: common.GetTimestamp()}); err != nil {
+			ProductName: "测试商品", Amount: "0.00", OrderTime: common.GetTimestamp()}); err != nil {
 			return err
 		}
 	}

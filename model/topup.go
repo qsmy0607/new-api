@@ -215,7 +215,7 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 		if err := tx.Save(topUp).Error; err != nil {
 			return err
 		}
-		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, fmt.Sprintf("%.2f", topUp.Money), topUp.CreateTime); err != nil {
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, fmt.Sprintf("%.2f", topUp.Money), topUp.CompleteTime, "额度充值"); err != nil {
 			return err
 		}
 
@@ -281,7 +281,7 @@ func Recharge(referenceId string, customerId string, callerIp string, paidAmount
 		if len(paidAmount) > 0 {
 			notificationAmount = paidAmount[0]
 		}
-		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, notificationAmount, topUp.CreateTime); err != nil {
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, notificationAmount, topUp.CompleteTime, "额度充值"); err != nil {
 			return err
 		}
 
@@ -596,7 +596,7 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 		if len(paidAmount) > 0 {
 			notificationAmount = paidAmount[0]
 		}
-		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, notificationAmount, topUp.CreateTime); err != nil {
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, notificationAmount, topUp.CompleteTime, "额度充值"); err != nil {
 			return err
 		}
 
@@ -658,7 +658,7 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 			return err
 		}
 
-		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, fmt.Sprintf("%.2f", topUp.Money), topUp.CreateTime); err != nil {
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, fmt.Sprintf("%.2f", topUp.Money), topUp.CompleteTime, "额度充值"); err != nil {
 			return err
 		}
 
@@ -722,7 +722,7 @@ func RechargeWaffoPancake(tradeNo string) (err error) {
 			return err
 		}
 
-		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, fmt.Sprintf("%.2f", topUp.Money), topUp.CreateTime); err != nil {
+		if err := QueueWeChatOrderNotification(tx, "topup", topUp.TradeNo, fmt.Sprintf("%.2f", topUp.Money), topUp.CompleteTime, "额度充值"); err != nil {
 			return err
 		}
 
