@@ -152,6 +152,10 @@ func TestWeChatOrderPaymentOutbox(t *testing.T) {
 			}
 			plan := model.SubscriptionPlan{Title: "WeChat plan", PriceAmount: 3, DurationUnit: model.SubscriptionDurationMonth, DurationValue: 1, Enabled: true}
 			require.NoError(t, db.Create(&plan).Error)
+			// This fixture swaps databases, but plan caches are process-wide and
+			// earlier billing tests can have cached the same auto-generated ID.
+			model.InvalidateSubscriptionPlanCache(plan.Id)
+			t.Cleanup(func() { model.InvalidateSubscriptionPlanCache(plan.Id) })
 			subscription := model.SubscriptionOrder{UserId: user.Id, PlanId: plan.Id, Money: 3, TradeNo: "subscription", PaymentProvider: model.PaymentProviderEpay, PaymentMethod: "alipay", Status: common.TopUpStatusPending}
 			require.NoError(t, subscription.Insert())
 			for range 2 {
